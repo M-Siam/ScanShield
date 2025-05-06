@@ -1,5 +1,6 @@
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
+const fileList = document.getElementById('file-list');
 const scanBtn = document.getElementById('scan-btn');
 const sanitizeBtn = document.getElementById('sanitize-btn');
 const progressBar = document.getElementById('progress-bar');
@@ -18,7 +19,7 @@ const languageSelect = document.getElementById('language-select');
 
 let filesContent = [];
 let scanResults = [];
-let sanitizedContent = '';
+let sanitizedContent = [];
 
 // Regex Patterns (English by default)
 const patterns = {
@@ -54,37 +55,46 @@ themeToggle.addEventListener('click', () => {
 if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     document.body.classList.add('dark');
     themeToggle.querySelector('img').src = 'assets/icons/sun.svg';
+} else {
+    themeToggle.querySelector('img').src = 'assets/icons/moon.svg';
 }
 
 // Drag and Drop
 dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
-    dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900');
+    dropZone.classList.add('border-light-blue-500', 'bg-light-blue-50', 'dark:bg-gray-700');
 });
 
 dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900');
+    dropZone.classList.remove('border-light-blue-500', 'bg-light-blue-50', 'dark:bg-gray-700');
 });
 
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
-    dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900');
+    dropZone.classList.remove('border-light-blue-500', 'bg-light-blue-50', 'dark:bg-gray-700');
     handleFiles(e.dataTransfer.files);
 });
 
 dropZone.addEventListener('click', () => fileInput.click());
 
-fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+fileInput.addEventListener('change', () => {
+    handleFiles(fileInput.files);
+    fileInput.value = ''; // Reset input
+});
 
 // Handle Files
 async function handleFiles(files) {
+    fileList.innerHTML = '';
     filesContent = [];
-    scanResults = [];
     for (const file of files) {
-        const content = await readFile(file);
-        filesContent.push({ name: file.name, content, metadata: await extractMetadata(file) });
+        if (!['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'image/png', 'image/jpeg'].includes(file.type)) {
+            alert(`Unsupported file type: ${file.name}`);
+            continue;
+        }
+        filesContent.push({ name: file.name, file });
+        fileList.innerHTML += `<p class="text-sm text-gray-600 dark:text-gray-300">${file.name}</p>`;
     }
-    scanBtn.disabled = false;
+    scanBtn.disabled = filesContent.length === 0;
 }
 
 // Read File
@@ -93,28 +103,47 @@ async function readFile(file) {
         if (file.type === 'application/pdf') {
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const typedArray = new Uint8Array(e.target.result);
-                const pdf = await pdfjsLib.getDocument(typedArray).promise;
-                let text = '';
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    text += content.items.map(item => item.str).join(' ') + '\n';
+                try {
+                    const typedArray = new Uint8Array(e.target.result);
+                    const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                    let text = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        text += content.items.map(item => item.str).join(' ') + '\n';
+                    }
+                    resolve(text);
+                } catch (err) {
+                    reject(`Error reading PDF: ${err.message}`);
                 }
-                resolve(text);
             };
             reader.readAsArrayBuffer(file);
         } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
-                resolve(result.value);
+                try {
+                    const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
+                    resolve(result.value);
+                } catch (err) {
+                    reject(`Error reading DOCX: ${err.message}`);
+                }
             };
             reader.readAsArrayBuffer(file);
         } else if (file.type === 'text/plain') {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
             reader.readAsText(file);
+        } else if (file.type === 'image/png' || file.type === 'image/jpeg') {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const { data: { text } } = await Tesseract.recognize(e.target.result, 'eng');
+                    resolve(text);
+                } catch (err) {
+                    reject(`Error reading image: ${err.message}`);
+                }
+            };
+            reader.readAsDataURL(file);
         } else {
             reject('Unsupported file type');
         }
@@ -128,12 +157,16 @@ async function extractMetadata(file) {
         const reader = new FileReader();
         return new Promise((resolve) => {
             reader.onload = async (e) => {
-                const typedArray = new Uint8Array(e.target.result);
-                const pdf = await pdfjsLib.getDocument(typedArray).promise;
-                const meta = await pdf.getMetadata();
-                metadata.author = meta.info.Author || 'Unknown';
-                metadata.created = meta.info.CreationDate || 'Unknown';
-                resolve(metadata);
+                try {
+                    const typedArray = new Uint8Array(e.target.result);
+                    const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                    const meta = await pdf.getMetadata();
+                    metadata.author = meta.info.Author || 'Unknown';
+                    metadata.created = meta.info.CreationDate || 'Unknown';
+                    resolve(metadata);
+                } catch {
+                    resolve({});
+                }
             };
             reader.readAsArrayBuffer(file);
         });
@@ -143,15 +176,26 @@ async function extractMetadata(file) {
 
 // Scan Files
 scanBtn.addEventListener('click', async () => {
+    if (filesContent.length === 0) return;
     progressBar.classList.remove('hidden');
     let progress = 0;
     const increment = 100 / filesContent.length;
+    scanResults = [];
+    beforeContent.innerHTML = '';
+    afterContent.innerHTML = '';
+    sanitizedContent = [];
 
-    for (const file of filesContent) {
-        const result = scanContent(file.content);
-        scanResults.push({ name: file.name, result, metadata: file.metadata });
-        progress += increment;
-        progressBar.querySelector('div').style.width = `${progress}%`;
+    for (const { name, file } of filesContent) {
+        try {
+            const content = await readFile(file);
+            const metadata = await extractMetadata(file);
+            const result = scanContent(content);
+            scanResults.push({ name, content, result, metadata });
+            progress += increment;
+            progressBar.querySelector('div').style.width = `${progress}%`;
+        } catch (err) {
+            alert(`Error processing ${name}: ${err}`);
+        }
     }
 
     setTimeout(() => {
@@ -174,7 +218,10 @@ function scanContent(content) {
 
     for (const [type, pattern] of Object.entries(patterns[lang])) {
         const matches = content.match(pattern) || [];
-        result[type] = matches.map(match => ({ value: match, risk: type === 'email' || type === 'phone' || type === 'id' ? 'high' : type === 'address' || type === 'keywords' ? 'medium' : 'low' }));
+        result[type] = matches.map(match => ({
+            value: match,
+            risk: type === 'email' || type === 'phone' || type === 'id' ? 'high' : type === 'address' || type === 'keywords' ? 'medium' : 'low'
+        }));
     }
 
     return result;
@@ -187,7 +234,7 @@ function displayResults() {
     let score = 100;
 
     scanResults.forEach(fileResult => {
-        const { result, metadata } = fileResult;
+        const { name, content, result, metadata } = fileResult;
 
         // Privacy Score
         let fileFindings = 0;
@@ -204,23 +251,23 @@ function displayResults() {
         }
 
         // Content
-        let content = fileResult.content;
+        let displayContent = content;
         for (const [type, matches] of Object.entries(result)) {
             matches.forEach(match => {
                 const className = match.risk === 'high' ? 'high-risk' : match.risk === 'medium' ? 'medium-risk' : 'safe';
-                const tooltip = match.risk === 'high' ? 'Sharing this may lead to privacy risks.' : 'Consider removing this.';
-                content = content.replace(match.value, `<span class="${className}" data-tooltip="${tooltip}">${match.value}</span>`);
+                const tooltip = match.risk === 'high' ? 'High risk: Consider removing to avoid privacy issues.' : 'Medium risk: May be safe but review before sharing.';
+                displayContent = displayContent.replaceAll(match.value, `<span class="${className}" data-tooltip="${tooltip}">${match.value}</span>`);
             });
         }
-        beforeContent.innerHTML += `<h5 class="font-medium mt-4">${fileResult.name}</h5><p>${content}</p>`;
+        beforeContent.innerHTML += `<h5 class="font-medium mt-4">${name}</h5><p>${displayContent}</p>`;
     });
 
     // Privacy Score
-    score = Math.max(0, score);
+    score = Math.max(0, Math.round(score));
     const riskLevel = score < 40 ? 'High' : score < 70 ? 'Medium' : 'Low';
     privacyScore.classList.remove('hidden');
     scoreText.textContent = `${score}/100 (${riskLevel} Risk)`;
-    scoreBreakdown.innerHTML = scanResults.flatMap(file => Object.entries(file.result).map(([type, matches]) => `<p>${type}: ${matches.length}</p>`)).join('');
+    scoreBreakdown.innerHTML = scanResults.flatMap(file => Object.entries(file.result).map(([type, matches]) => `<p>${type.charAt(0).toUpperCase() + type.slice(1)}: ${matches.length}</p>`)).join('');
 
     // Show Sanitize and Export
     sanitizeBtn.classList.remove('hidden');
@@ -230,19 +277,21 @@ function displayResults() {
 
 // Sanitize Content
 sanitizeBtn.addEventListener('click', () => {
-    sanitizedContent = filesContent.map(file => {
+    sanitizedContent = scanResults.map(file => {
         let content = file.content;
-        scanResults.find(r => r.name === file.name).result.emails.forEach(m => content = content.replace(m.value, '[REDACTED]'));
-        scanResults.find(r => r.name === file.name).result.phones.forEach(m => content = content.replace(m.value, '[REDACTED]'));
-        scanResults.find(r => r.name === file.name).result.ids.forEach(m => content = content.replace(m.value, '[REDACTED]'));
+        file.result.emails.forEach(m => content = content.replaceAll(m.value, '[EMAIL REDACTED]'));
+        file.result.phones.forEach(m => content = content.replaceAll(m.value, '[PHONE REDACTED]'));
+        file.result.ids.forEach(m => content = content.replaceAll(m.value, '[ID REDACTED]'));
+        file.result.addresses.forEach(m => content = content.replaceAll(m.value, '[ADDRESS REDACTED]'));
         return `<h5 class="font-medium mt-4">${file.name}</h5><p>${content}</p>`;
-    }).join('');
-    afterContent.innerHTML = sanitizedContent;
+    });
+    afterContent.innerHTML = sanitizedContent.join('');
 });
 
 // Export as TXT
 exportTxt.addEventListener('click', () => {
-    const blob = new Blob([sanitizedContent.replace(/<[^>]+>/g, '')], { type: 'text/plain' });
+    const text = sanitizedContent.map(c => c.replace(/<[^>]+>/g, '')).join('\n\n');
+    const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -251,17 +300,19 @@ exportTxt.addEventListener('click', () => {
     URL.revokeObjectURL(url);
 });
 
-// Export as PDF (Basic HTML to PDF)
+// Export as PDF
 exportPdf.addEventListener('click', () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
+    doc.setFont('Inter', 'normal');
     doc.text('ScanShield Sanitized Output', 10, 10);
     let y = 20;
     scanResults.forEach(file => {
         doc.text(file.name, 10, y);
         y += 10;
-        doc.text(file.content.substring(0, 100), 10, y);
-        y += 10;
+        const lines = doc.splitTextToSize(file.content.replace(/<[^>]+>/g, '').substring(0, 500), 180);
+        doc.text(lines, 10, y);
+        y += lines.length * 10;
     });
     doc.save('sanitized.pdf');
 });
