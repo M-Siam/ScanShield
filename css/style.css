@@ -16,9 +16,6 @@
     --gray-600: #4B5563; /* Dark Text */
     --gray-700: #374151; /* Dark Mode Card */
     --gray-900: #111827; /* Dark Mode Background */
-    --red-600: #DC2626; /* High Risk */
-    --yellow-500: #F59E0B; /* Medium Risk */
-    --green-600: #10B981; /* Low Risk */
 }
 
 /* Base Styles */
@@ -50,13 +47,13 @@ main {
     box-shadow: 0 15px 20px rgba(0, 0, 0, 0.15);
 }
 
-/* Inputs and Selects */
-input, select {
+/* Inputs */
+input {
     transition: all 0.2s ease;
     border: 1px solid var(--gray-200);
 }
 
-input:focus, select:focus {
+input:focus {
     outline: none;
     border-color: var(--blue-600);
     box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2);
@@ -68,26 +65,6 @@ button {
     overflow: hidden;
 }
 
-.ripple::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.5);
-    opacity: 0;
-    border-radius: 100%;
-    transform: scale(1);
-    transform-origin: center;
-    transition: all 0.3s ease;
-}
-
-.ripple:hover::after {
-    opacity: 1;
-    transform: scale(50);
-}
-
 /* Drop Zone */
 #drop-zone {
     transition: all 0.3s ease;
@@ -96,58 +73,6 @@ button {
 #drop-zone:hover {
     background-color: var(--gray-50);
     border-color: var(--blue-600);
-}
-
-/* Tooltip */
-.tooltip {
-    position: relative;
-}
-
-.tooltip:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    z-index: 20;
-    background: var(--gray-700);
-    color: var(--white);
-    font-size: 0.75rem;
-    padding: 0.5rem;
-    border-radius: 0.25rem;
-    top: -2.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    min-width: 200px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    animation: fadeIn 0.2s ease;
-}
-
-/* Progress Bar */
-#progress-bar .bg-blue-600 {
-    transition: width 0.5s ease-in-out;
-}
-
-/* Risk Highlights */
-.high-risk {
-    background: rgba(220, 38, 38, 0.15);
-    padding: 0.2rem 0.4rem;
-    border-radius: 0.25rem;
-    color: var(--red-600);
-    font-weight: 500;
-}
-
-.medium-risk {
-    background: rgba(245, 158, 11, 0.15);
-    padding: 0.2rem 0.4rem;
-    border-radius: 0.25rem;
-    color: var(--yellow-500);
-    font-weight: 500;
-}
-
-.safe {
-    background: rgba(16, 185, 129, 0.15);
-    padding: 0.2rem 0.4rem;
-    border-radius: 0.25rem;
-    color: var(--green-600);
-    font-weight: 500;
 }
 
 /* Animations */
