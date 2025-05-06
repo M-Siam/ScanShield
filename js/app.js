@@ -1,5 +1,5 @@
 // === ScanShield Core Logic ===
-// Professional, robust client-side document and image scanner
+// Robust, professional client-side document and image scanner
 
 // DOM Elements
 const DOM = {
@@ -36,31 +36,31 @@ const state = {
     theme: localStorage.getItem('theme') || 'light'
 };
 
-// Regex Patterns
+// Enhanced Regex Patterns
 const patterns = {
     en: {
         email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
         phone: /\b(\+\d{1,3}[-.\s]?)?(\d{3}[-.\s]?\d{3}[-.\s]?\d{4}|\(\d{3}\)\s*\d{3}[-.\s]?\d{4})\b/g,
-        id: /\b\d{3}-\d{2}-\d{4}\b/g, // SSN-like
-        address: /\b\d{1,5}\s[A-Za-z\s]+(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road)\b/g,
-        url: /\b(https?:\/\/)?(bit\.ly|t\.co|utm_\S+|[A-Za-z0-9-]+\.[a-z]{2,3}\/\S+)\b/g,
-        keywords: /\b(salary|bank|home|dob|password|ssn)\b/gi
+        id: /\b\d{3}-\d{2}-\d{4}\b|\b\d{9}\b/g, // SSN or similar
+        address: /\b\d{1,5}\s[A-Za-z\s]+?(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Ln|Lane)\b/gi,
+        url: /\b(https?:\/\/)?([A-Za-z0-9-]+\.[a-z]{2,3}(\/\S*)?|bit\.ly|t\.co|utm_\S+)\b/gi,
+        keywords: /\b(salary|bank|account|home|dob|password|ssn|credit|card)\b/gi
     },
     es: {
         email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
         phone: /\b(\+\d{1,3}[-.\s]?)?\d{9}\b/g,
         id: /\b\d{8}[A-Z]\b/g, // DNI-like
-        address: /\bCalle|Avenida|Plaza\s[A-Za-z\s]+\d{1,5}\b/g,
-        url: /\b(https?:\/\/)?(bit\.ly|t\.co|utm_\S+|[A-Za-z0-9-]+\.[a-z]{2,3}\/\S+)\b/g,
-        keywords: /\b(salario|banco|hogar|fecha de nacimiento)\b/gi
+        address: /\b(Calle|Avenida|Plaza)\s[A-Za-z\s]+\d{1,5}\b/gi,
+        url: /\b(https?:\/\/)?([A-Za-z0-9-]+\.[a-z]{2,3}(\/\S*)?|bit\.ly|t\.co|utm_\S+)\b/gi,
+        keywords: /\b(salario|banco|cuenta|hogar|fecha de nacimiento|contraseña)\b/gi
     },
     fr: {
         email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
         phone: /\b(\+\d{1,3}[-.\s]?)?0\d{9}\b/g,
         id: /\b\d{12}\b/g, // INSEE-like
-        address: /\b\d{1,5}\s(Rue|Avenue|Boulevard)\s[A-Za-z\s]+\b/g,
-        url: /\b(https?:\/\/)?(bit\.ly|t\.co|utm_\S+|[A-Za-z0-9-]+\.[a-z]{2,3}\/\S+)\b/g,
-        keywords: /\b(salaire|banque|maison|date de naissance)\b/gi
+        address: /\b\d{1,5}\s(Rue|Avenue|Boulevard)\s[A-Za-z\s]+\b/gi,
+        url: /\b(https?:\/\/)?([A-Za-z0-9-]+\.[a-z]{2,3}(\/\S*)?|bit\.ly|t\.co|utm_\S+)\b/gi,
+        keywords: /\b(salaire|banque|compte|maison|date de naissance|mot de passe)\b/gi
     }
 };
 
@@ -79,7 +79,7 @@ const utils = {
     log: (message, type = 'info') => {
         const timestamp = new Date().toISOString();
         state.logs.push(`[${timestamp}] [${type.toUpperCase()}] ${message}`);
-        DOM.logContent.textContent = state.logs.slice(-50).join('\n'); // Limit to last 50 logs
+        DOM.logContent.textContent = state.logs.slice(-50).join('\n');
         DOM.scanLog.classList.remove('hidden');
         console.log(`[${type}] ${message}`);
     },
@@ -97,6 +97,14 @@ const utils = {
             clearTimeout(timeout);
             timeout = setTimeout(() => func(...args), wait);
         };
+    },
+    normalizeText: (text) => {
+        if (!text) return '';
+        return text
+            .replace(/\s+/g, ' ') // Normalize whitespace
+            .replace(/[\r\n]+/g, '\n') // Normalize line breaks
+            .replace(/[^\x20-\x7E\n]/g, '') // Remove non-printable characters
+            .trim();
     }
 };
 
@@ -131,14 +139,20 @@ const fileHandler = {
         'image/jpeg'
     ],
     handleFiles: async (files) => {
-        state.filesContent = [];
-        DOM.fileList.innerHTML = '';
-        utils.clearStatus();
         if (!files || files.length === 0) {
             utils.showStatus('No files selected', 'error');
+            utils.log('No files selected', 'error');
             return;
         }
-        for (const file of files) {
+        const newFiles = Array.from(files).filter(file => 
+            !state.filesContent.some(f => f.name === file.name && f.file.size === file.size)
+        );
+        if (newFiles.length === 0) {
+            utils.showStatus('All selected files are already uploaded', 'error');
+            utils.log('Duplicate files rejected', 'warn');
+            return;
+        }
+        for (const file of newFiles) {
             if (!fileHandler.validTypes.includes(file.type)) {
                 utils.showStatus(`Unsupported file: ${file.name}`, 'error');
                 utils.log(`Rejected file ${file.name}: Invalid type ${file.type}`, 'error');
@@ -153,31 +167,26 @@ const fileHandler = {
             utils.log(`Added file: ${file.name}`);
         }
         DOM.scanBtn.disabled = state.filesContent.length === 0;
-        if (state.filesContent.length > 0) {
-            utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, 'success');
-        } else {
-            utils.showStatus('No valid files selected', 'error');
-        }
+        utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, 'success');
         fileHandler.bindRemoveButtons();
+        DOM.fileInput.value = ''; // Reset file input
     },
     bindRemoveButtons: () => {
         document.querySelectorAll('.remove-file').forEach(button => {
-            button.addEventListener('click', () => {
+            button.removeEventListener('click', button._handler); // Prevent duplicate listeners
+            button._handler = () => {
                 const name = button.dataset.name;
                 state.filesContent = state.filesContent.filter(f => f.name !== name);
                 button.parentElement.remove();
                 DOM.scanBtn.disabled = state.filesContent.length === 0;
                 utils.log(`Removed file: ${name}`);
-                if (state.filesContent.length === 0) {
-                    utils.showStatus('No files selected');
-                } else {
-                    utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, 'success');
-                }
-            });
+                utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, state.filesContent.length > 0 ? 'success' : 'info');
+            };
+            button.addEventListener('click', button._handler);
         });
     },
     readFile: async (file, retryCount = 0) => {
-        const maxRetries = 2;
+        const maxRetries = 3;
         return new Promise((resolve, reject) => {
             if (file.type === 'application/pdf') {
                 if (!window.pdfjsLib) {
@@ -195,7 +204,7 @@ const fileHandler = {
                             const content = await page.getTextContent();
                             text += content.items.map(item => item.str).join(' ') + '\n';
                         }
-                        resolve(text);
+                        resolve(utils.normalizeText(text));
                         utils.log(`Read PDF: ${file.name}`);
                     } catch (err) {
                         if (retryCount < maxRetries) {
@@ -207,13 +216,14 @@ const fileHandler = {
                         }
                     }
                 };
+                reader.onerror = () => reject('FileReader error');
                 reader.readAsArrayBuffer(file);
             } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
                         const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
-                        resolve(result.value);
+                        resolve(utils.normalizeText(result.value));
                         utils.log(`Read DOCX: ${file.name}`);
                     } catch (err) {
                         if (retryCount < maxRetries) {
@@ -225,22 +235,45 @@ const fileHandler = {
                         }
                     }
                 };
+                reader.onerror = () => reject('FileReader error');
                 reader.readAsArrayBuffer(file);
             } else if (file.type === 'text/plain') {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    resolve(e.target.result);
+                    resolve(utils.normalizeText(e.target.result));
                     utils.log(`Read TXT: ${file.name}`);
                 };
+                reader.onerror = () => reject('FileReader error');
                 reader.readAsText(file);
             } else if (file.type === 'image/png' || file.type === 'image/jpeg') {
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
-                        const { data: { text } } = await Tesseract.recognize(e.target.result, 'eng', {
-                            logger: (m) => utils.log(`OCR Progress for ${file.name}: ${m.status}`),
+                        const img = new Image();
+                        img.src = e.target.result;
+                        await new Promise((res, rej) => {
+                            img.onload = res;
+                            img.onerror = () => rej('Image load error');
                         });
-                        resolve(text);
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxSize = 1000;
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height && width > maxSize) {
+                            height *= maxSize / width;
+                            width = maxSize;
+                        } else if (height > maxSize) {
+                            width *= maxSize / height;
+                            height = maxSize;
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const { data: { text } } = await Tesseract.recognize(canvas.toDataURL(), 'eng', {
+                            logger: (m) => utils.log(`OCR Progress for ${file.name}: ${m.status}`)
+                        });
+                        resolve(utils.normalizeText(text));
                         utils.log(`Processed image: ${file.name}`);
                     } catch (err) {
                         if (retryCount < maxRetries) {
@@ -252,6 +285,7 @@ const fileHandler = {
                         }
                     }
                 };
+                reader.onerror = () => reject('FileReader error');
                 reader.readAsDataURL(file);
             } else {
                 reject('Unsupported file type');
@@ -278,6 +312,7 @@ const fileHandler = {
                         resolve({});
                     }
                 };
+                reader.onerror = () => resolve({});
                 reader.readAsArrayBuffer(file);
             });
         }
@@ -288,6 +323,7 @@ const fileHandler = {
 // Scanner Logic
 const scanner = {
     scanContent: (content, lang) => {
+        if (!content) return { emails: [], phones: [], ids: [], addresses: [], urls: [], keywords: [] };
         const result = {
             emails: [],
             phones: [],
@@ -321,7 +357,7 @@ const scanner = {
         return { score, riskLevel, totalFindings };
     },
     sanitizeContent: (file) => {
-        let content = file.content;
+        let content = file.content || '';
         file.result.emails.forEach(m => content = content.replaceAll(m.value, '[EMAIL REDACTED]'));
         file.result.phones.forEach(m => content = content.replaceAll(m.value, '[PHONE REDACTED]'));
         file.result.ids.forEach(m => content = content.replaceAll(m.value, '[ID REDACTED]'));
@@ -341,12 +377,12 @@ const renderer = {
 
         // Privacy Score
         DOM.privacyScore.classList.remove('hidden');
-        DOM.scoreText.textContent = `${score}/100 (${riskLevel} Risk)`;
+        DOM.scoreText.textContent = totalFindings > 0 ? `${score}/100 (${riskLevel} Risk)` : '100/100 (No Risks)';
         DOM.scoreBreakdown.innerHTML = state.scanResults.flatMap(file => 
             Object.entries(file.result).map(([type, matches]) => 
                 `<p>${type.charAt(0).toUpperCase() + type.slice(1)}: ${matches.length}</p>`
             )
-        ).join('');
+        ).join('') || '<p>No sensitive data detected</p>';
         utils.log(`Displayed score: ${score}`);
 
         // Metadata
@@ -363,7 +399,7 @@ const renderer = {
         // Content
         DOM.beforeContent.innerHTML = '';
         state.scanResults.forEach(fileResult => {
-            let displayContent = fileResult.content;
+            let displayContent = fileResult.content || 'No text extracted';
             for (const [type, matches] of Object.entries(fileResult.result)) {
                 matches.forEach(match => {
                     const className = match.risk === 'high' ? 'high-risk' : match.risk === 'medium' ? 'medium-risk' : 'safe';
@@ -402,29 +438,35 @@ const initEvents = () => {
     // Drag and Drop
     const handleDragOver = utils.debounce((e) => {
         e.preventDefault();
+        e.stopPropagation();
         DOM.dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
     }, 100);
     DOM.dropZone.addEventListener('dragover', handleDragOver);
+    DOM.dropZone.addEventListener('dragenter', handleDragOver);
 
-    DOM.dropZone.addEventListener('dragleave', () => {
+    DOM.dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         DOM.dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
     });
 
     DOM.dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         DOM.dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
         fileHandler.handleFiles(e.dataTransfer.files);
+        utils.log('Files dropped');
     });
 
     // File Input
-    DOM.dropZone.addEventListener('click', () => {
+    DOM.dropZone.addEventListener('click', (e) => {
+        e.preventDefault();
         DOM.fileInput.click();
         utils.log('File input triggered');
     });
 
-    DOM.fileInput.addEventListener('change', () => {
-        fileHandler.handleFiles(DOM.fileInput.files);
-        DOM.fileInput.value = '';
+    DOM.fileInput.addEventListener('change', (e) => {
+        fileHandler.handleFiles(e.target.files);
         utils.log('Files selected via input');
     });
 
@@ -475,7 +517,7 @@ const initEvents = () => {
         }));
         DOM.afterContent.innerHTML = state.sanitizedContent.map(file => `
             <h5 class="font-medium mt-4">${file.name}</h5>
-            <p>${file.content}</p>
+            <p>${file.content || 'No text extracted'}</p>
         `).join('');
         utils.log('Sanitization completed');
         utils.showStatus('Content sanitized', 'success');
@@ -483,7 +525,7 @@ const initEvents = () => {
 
     // Export as TXT
     DOM.exportTxt.addEventListener('click', () => {
-        const text = state.sanitizedContent.map(file => `File: ${file.name}\n${file.content}`).join('\n\n');
+        const text = state.sanitizedContent.map(file => `File: ${file.name}\n${file.content || 'No text extracted'}`).join('\n\n');
         const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -497,25 +539,30 @@ const initEvents = () => {
 
     // Export as PDF
     DOM.exportPdf.addEventListener('click', () => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.setFont('Inter', 'normal');
-        doc.text('ScanShield Sanitized Output', 10, 10);
-        let y = 20;
-        state.sanitizedContent.forEach(file => {
-            doc.text(file.name, 10, y);
-            y += 10;
-            const lines = doc.splitTextToSize(file.content.substring(0, 500), 180);
-            doc.text(lines, 10, y);
-            y += lines.length * 10 + 10;
-            if (y > 280) {
-                doc.addPage();
-                y = 10;
-            }
-        });
-        doc.save('sanitized.pdf');
-        utils.log('Exported as PDF');
-        utils.showStatus('Exported as PDF', 'success');
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFont('Inter', 'normal');
+            doc.text('ScanShield Sanitized Output', 10, 10);
+            let y = 20;
+            state.sanitizedContent.forEach(file => {
+                doc.text(file.name, 10, y);
+                y += 10;
+                const lines = doc.splitTextToSize(file.content.substring(0, 500) || 'No text extracted', 180);
+                doc.text(lines, 10, y);
+                y += lines.length * 10 + 10;
+                if (y > 280) {
+                    doc.addPage();
+                    y = 10;
+                }
+            });
+            doc.save('sanitized.pdf');
+            utils.log('Exported as PDF');
+            utils.showStatus('Exported as PDF', 'success');
+        } catch (err) {
+            utils.showStatus('Error exporting PDF', 'error');
+            utils.log(`PDF export error: ${err.message}`, 'error');
+        }
     });
 };
 
@@ -531,6 +578,11 @@ const init = () => {
     } else {
         utils.log('pdf.js not loaded', 'error');
         utils.showStatus('Error: pdf.js not loaded', 'error');
+    }
+    // Polyfill for older browsers
+    if (!window.Promise) {
+        utils.log('Adding Promise polyfill', 'warn');
+        document.write('<script src="https://cdn.jsdelivr.net/npm/es6-promise@4.2.8/dist/es6-promise.auto.min.js"></script>');
     }
 };
 
