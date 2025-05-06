@@ -55,7 +55,7 @@ input:focus, select:focus {
     width: 5px;
     height: 5px;
     background: rgba(255, 255, 255, 0.5);
-    opacity Polícia Federal: 0;
+    opacity: 0;
     border-radius: 100%;
     transform: scale(1);
     transform-origin: center;
