@@ -1,5 +1,5 @@
 // === ScanShield Core Logic ===
-// Comprehensive client-side document and image scanner with neon UI
+// Professional, robust client-side document and image scanner
 
 // DOM Elements
 const DOM = {
@@ -33,7 +33,7 @@ const state = {
     sanitizedContent: [],
     logs: [],
     isScanning: false,
-    theme: localStorage.getItem('theme') || 'dark'
+    theme: localStorage.getItem('theme') || 'light'
 };
 
 // Regex Patterns
@@ -79,30 +79,38 @@ const utils = {
     log: (message, type = 'info') => {
         const timestamp = new Date().toISOString();
         state.logs.push(`[${timestamp}] [${type.toUpperCase()}] ${message}`);
-        DOM.logContent.textContent = state.logs.join('\n');
+        DOM.logContent.textContent = state.logs.slice(-50).join('\n'); // Limit to last 50 logs
         DOM.scanLog.classList.remove('hidden');
         console.log(`[${type}] ${message}`);
     },
     showStatus: (message, type = 'info') => {
         DOM.statusMessage.textContent = message;
-        DOM.statusMessage.className = `mt-4 text-sm ${type === 'error' ? 'text-red-400' : type === 'success' ? 'text-neon-green' : 'text-neon-gray'}`;
+        DOM.statusMessage.className = `mt-4 text-sm ${type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-gray-500'}`;
     },
     clearStatus: () => {
         DOM.statusMessage.textContent = '';
-        DOM.statusMessage.className = 'mt-4 text-sm text-neon-gray';
+        DOM.statusMessage.className = 'mt-4 text-sm text-gray-500';
+    },
+    debounce: (func, wait) => {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), wait);
+        };
     }
 };
 
 // Theme Management
 const themeManager = {
     init: () => {
-        if (state.theme === 'dark' || (!state.theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        if (state.theme === 'dark') {
             document.body.classList.add('dark');
             DOM.themeToggle.querySelector('img').src = 'assets/icons/sun.svg';
         } else {
             document.body.classList.remove('dark');
             DOM.themeToggle.querySelector('img').src = 'assets/icons/moon.svg';
         }
+        utils.log(`Initialized theme: ${state.theme}`);
     },
     toggle: () => {
         document.body.classList.toggle('dark');
@@ -126,23 +134,29 @@ const fileHandler = {
         state.filesContent = [];
         DOM.fileList.innerHTML = '';
         utils.clearStatus();
+        if (!files || files.length === 0) {
+            utils.showStatus('No files selected', 'error');
+            return;
+        }
         for (const file of files) {
             if (!fileHandler.validTypes.includes(file.type)) {
-                utils.showStatus(`Unsupported file type: ${file.name}`, 'error');
-                utils.log(`Rejected file ${file.name} due to unsupported type: ${file.type}`, 'error');
+                utils.showStatus(`Unsupported file: ${file.name}`, 'error');
+                utils.log(`Rejected file ${file.name}: Invalid type ${file.type}`, 'error');
                 continue;
             }
             state.filesContent.push({ name: file.name, file });
             DOM.fileList.innerHTML += `
-                <div class="flex justify-between items-center p-2 bg-neon-dark rounded-lg">
-                    <span class="text-sm text-neon-gray">${file.name}</span>
-                    <button class="remove-file text-neon-pink hover:text-neon-purple" data-name="${file.name}">✕</button>
+                <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded">
+                    <span class="text-sm text-gray-600 dark:text-gray-300">${file.name}</span>
+                    <button class="remove-file text-red-600 hover:text-red-700" data-name="${file.name}">✕</button>
                 </div>`;
             utils.log(`Added file: ${file.name}`);
         }
         DOM.scanBtn.disabled = state.filesContent.length === 0;
         if (state.filesContent.length > 0) {
-            utils.showStatus(`${  ('success');
+            utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, 'success');
+        } else {
+            utils.showStatus('No valid files selected', 'error');
         }
         fileHandler.bindRemoveButtons();
     },
@@ -156,11 +170,14 @@ const fileHandler = {
                 utils.log(`Removed file: ${name}`);
                 if (state.filesContent.length === 0) {
                     utils.showStatus('No files selected');
+                } else {
+                    utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, 'success');
                 }
             });
         });
     },
-    readFile: async (file) => {
+    readFile: async (file, retryCount = 0) => {
+        const maxRetries = 2;
         return new Promise((resolve, reject) => {
             if (file.type === 'application/pdf') {
                 if (!window.pdfjsLib) {
@@ -179,10 +196,15 @@ const fileHandler = {
                             text += content.items.map(item => item.str).join(' ') + '\n';
                         }
                         resolve(text);
-                        utils.log(`Successfully read PDF: ${file.name}`);
+                        utils.log(`Read PDF: ${file.name}`);
                     } catch (err) {
-                        reject(`Error reading PDF: ${err.message}`);
-                        utils.log(`Failed to read PDF ${file.name}: ${err.message}`, 'error');
+                        if (retryCount < maxRetries) {
+                            utils.log(`Retrying PDF ${file.name} (${retryCount + 1}/${maxRetries})`, 'warn');
+                            setTimeout(() => fileHandler.readFile(file, retryCount + 1).then(resolve).catch(reject), 1000);
+                        } else {
+                            reject(`Error reading PDF: ${err.message}`);
+                            utils.log(`Failed to read PDF ${file.name}: ${err.message}`, 'error');
+                        }
                     }
                 };
                 reader.readAsArrayBuffer(file);
@@ -192,10 +214,15 @@ const fileHandler = {
                     try {
                         const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
                         resolve(result.value);
-                        utils.log(`Successfully read DOCX: ${file.name}`);
+                        utils.log(`Read DOCX: ${file.name}`);
                     } catch (err) {
-                        reject(`Error reading DOCX: ${err.message}`);
-                        utils.log(`Failed to read DOCX ${file.name}: ${err.message}`, 'error');
+                        if (retryCount < maxRetries) {
+                            utils.log(`Retrying DOCX ${file.name} (${retryCount + 1}/${maxRetries})`, 'warn');
+                            setTimeout(() => fileHandler.readFile(file, retryCount + 1).then(resolve).catch(reject), 1000);
+                        } else {
+                            reject(`Error reading DOCX: ${err.message}`);
+                            utils.log(`Failed to read DOCX ${file.name}: ${err.message}`, 'error');
+                        }
                     }
                 };
                 reader.readAsArrayBuffer(file);
@@ -203,7 +230,7 @@ const fileHandler = {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     resolve(e.target.result);
-                    utils.log(`Successfully read TXT: ${file.name}`);
+                    utils.log(`Read TXT: ${file.name}`);
                 };
                 reader.readAsText(file);
             } else if (file.type === 'image/png' || file.type === 'image/jpeg') {
@@ -214,10 +241,15 @@ const fileHandler = {
                             logger: (m) => utils.log(`OCR Progress for ${file.name}: ${m.status}`),
                         });
                         resolve(text);
-                        utils.log(`Successfully processed image: ${file.name}`);
+                        utils.log(`Processed image: ${file.name}`);
                     } catch (err) {
-                        reject(`Error processing image: ${err.message}`);
-                        utils.log(`Failed to process image ${file.name}: ${err.message}`, 'error');
+                        if (retryCount < maxRetries) {
+                            utils.log(`Retrying image ${file.name} (${retryCount + 1}/${maxRetries})`, 'warn');
+                            setTimeout(() => fileHandler.readFile(file, retryCount + 1).then(resolve).catch(reject), 1000);
+                        } else {
+                            reject(`Error processing image: ${err.message}`);
+                            utils.log(`Failed to process image ${file.name}: ${err.message}`, 'error');
+                        }
                     }
                 };
                 reader.readAsDataURL(file);
@@ -242,7 +274,7 @@ const fileHandler = {
                         utils.log(`Extracted metadata for ${file.name}`);
                         resolve(metadata);
                     } catch {
-                        utils.log(`No metadata available for ${file.name}`);
+                        utils.log(`No metadata for ${file.name}`);
                         resolve({});
                     }
                 };
@@ -271,7 +303,7 @@ const scanner = {
                 risk: type === 'email' || type === 'phone' || type === 'id' ? 'high' : type === 'address' || type === 'keywords' ? 'medium' : 'low'
             }));
         }
-        utils.log('Completed content scan');
+        utils.log('Content scan completed');
         return result;
     },
     calculateScore: (results) => {
@@ -285,7 +317,7 @@ const scanner = {
         });
         score = Math.max(0, Math.round(score));
         const riskLevel = score < 40 ? 'High' : score < 70 ? 'Medium' : 'Low';
-        utils.log(`Calculated privacy score: ${score} (${riskLevel})`);
+        utils.log(`Privacy score: ${score} (${riskLevel})`);
         return { score, riskLevel, totalFindings };
     },
     sanitizeContent: (file) => {
@@ -296,7 +328,7 @@ const scanner = {
         file.result.addresses.forEach(m => content = content.replaceAll(m.value, '[ADDRESS REDACTED]'));
         file.result.urls.forEach(m => content = content.replaceAll(m.value, '[URL REDACTED]'));
         file.result.keywords.forEach(m => content = content.replaceAll(m.value, '[KEYWORD REDACTED]'));
-        utils.log(`Sanitized content for ${file.name}`);
+        utils.log(`Sanitized ${file.name}`);
         return content;
     }
 };
@@ -315,7 +347,7 @@ const renderer = {
                 `<p>${type.charAt(0).toUpperCase() + type.slice(1)}: ${matches.length}</p>`
             )
         ).join('');
-        utils.log(`Displayed privacy score: ${score}`);
+        utils.log(`Displayed score: ${score}`);
 
         // Metadata
         state.scanResults.forEach(fileResult => {
@@ -346,16 +378,16 @@ const renderer = {
                 });
             }
             DOM.beforeContent.innerHTML += `
-                <h5 class="font-medium mt-4 text-neon-white">${fileResult.name}</h5>
+                <h5 class="font-medium mt-4">${fileResult.name}</h5>
                 <p>${displayContent}</p>`;
         });
-        utils.log('Displayed scanned content');
+        utils.log('Displayed content');
 
         // Show Sanitize and Export
         DOM.sanitizeBtn.classList.remove('hidden');
         DOM.scanContent.classList.remove('hidden');
         DOM.exportOptions.classList.remove('hidden');
-        utils.showStatus('Scan completed successfully', 'success');
+        utils.showStatus('Scan completed', 'success');
     },
     updateProgress: (progress) => {
         DOM.progressBar.querySelector('div').style.width = `${progress}%`;
@@ -368,26 +400,32 @@ const initEvents = () => {
     DOM.themeToggle.addEventListener('click', themeManager.toggle);
 
     // Drag and Drop
-    DOM.dropZone.addEventListener('dragover', (e) => {
+    const handleDragOver = utils.debounce((e) => {
         e.preventDefault();
-        DOM.dropZone.classList.add('border-neon-pink', 'bg-neon-dark', 'pulse');
-    });
+        DOM.dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
+    }, 100);
+    DOM.dropZone.addEventListener('dragover', handleDragOver);
 
     DOM.dropZone.addEventListener('dragleave', () => {
-        DOM.dropZone.classList.remove('border-neon-pink', 'bg-neon-dark', 'pulse');
+        DOM.dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
     });
 
     DOM.dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
-        DOM.dropZone.classList.remove('border-neon-pink', 'bg-neon-dark', 'pulse');
+        DOM.dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
         fileHandler.handleFiles(e.dataTransfer.files);
     });
 
-    DOM.dropZone.addEventListener('click', () => DOM.fileInput.click());
+    // File Input
+    DOM.dropZone.addEventListener('click', () => {
+        DOM.fileInput.click();
+        utils.log('File input triggered');
+    });
 
     DOM.fileInput.addEventListener('change', () => {
         fileHandler.handleFiles(DOM.fileInput.files);
         DOM.fileInput.value = '';
+        utils.log('Files selected via input');
     });
 
     // Scan Button
@@ -401,14 +439,14 @@ const initEvents = () => {
         DOM.beforeContent.innerHTML = '';
         DOM.afterContent.innerHTML = '';
         utils.clearStatus();
-        utils.log('Starting scan process');
+        utils.log('Starting scan');
 
         let progress = 0;
         const increment = 100 / state.filesContent.length;
 
         for (const { name, file } of state.filesContent) {
             try {
-                utils.log(`Processing file: ${name}`);
+                utils.log(`Processing ${name}`);
                 const content = await fileHandler.readFile(file);
                 const metadata = await fileHandler.extractMetadata(file);
                 const result = scanner.scanContent(content, DOM.languageSelect.value);
@@ -436,11 +474,11 @@ const initEvents = () => {
             content: scanner.sanitizeContent(file)
         }));
         DOM.afterContent.innerHTML = state.sanitizedContent.map(file => `
-            <h5 class="font-medium mt-4 text-neon-white">${file.name}</h5>
+            <h5 class="font-medium mt-4">${file.name}</h5>
             <p>${file.content}</p>
         `).join('');
         utils.log('Sanitization completed');
-        utils.showStatus('Content sanitized successfully', 'success');
+        utils.showStatus('Content sanitized', 'success');
     });
 
     // Export as TXT
@@ -453,7 +491,7 @@ const initEvents = () => {
         a.download = 'sanitized.txt';
         a.click();
         URL.revokeObjectURL(url);
-        utils.log('Exported sanitized content as TXT');
+        utils.log('Exported as TXT');
         utils.showStatus('Exported as TXT', 'success');
     });
 
@@ -461,7 +499,7 @@ const initEvents = () => {
     DOM.exportPdf.addEventListener('click', () => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.setFont('Orbitron', 'normal');
+        doc.setFont('Inter', 'normal');
         doc.text('ScanShield Sanitized Output', 10, 10);
         let y = 20;
         state.sanitizedContent.forEach(file => {
@@ -476,7 +514,7 @@ const initEvents = () => {
             }
         });
         doc.save('sanitized.pdf');
-        utils.log('Exported sanitized content as PDF');
+        utils.log('Exported as PDF');
         utils.showStatus('Exported as PDF', 'success');
     });
 };
@@ -487,12 +525,12 @@ const init = () => {
     initEvents();
     utils.log('ScanShield initialized');
     utils.showStatus('Ready to scan files');
-    // Ensure pdf.js worker is set
     if (window.pdfjsLib) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        utils.log('pdf.js loaded');
     } else {
         utils.log('pdf.js not loaded', 'error');
-        utils.showStatus('Error: pdf.js library not loaded', 'error');
+        utils.showStatus('Error: pdf.js not loaded', 'error');
     }
 };
 
