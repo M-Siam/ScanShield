@@ -1,0 +1,87 @@
+/* Tailwind CSS CDN */
+@import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
+
+/* Custom Styles */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+#drop-zone {
+    transition: all 0.3s ease;
+}
+
+#drop-zone:hover {
+    @apply border-blue-500 bg-blue-50 dark:bg-blue-900;
+}
+
+.ripple {
+    position: relative;
+    overflow: hidden;
+}
+
+.ripple::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1);
+    transform-origin: center;
+    transition: all 0.3s ease;
+}
+
+.ripple:hover::after {
+    opacity: 1;
+    transform: scale(50);
+}
+
+.glow-input {
+    @apply border-2 border-gray-300 dark:border-gray-600 rounded-md p-2 transition-all;
+}
+
+.glow-input:focus {
+    @apply border-blue-500 ring-2 ring-blue-200 dark:ring-blue-700;
+}
+
+.tooltip {
+    @apply relative;
+}
+
+.tooltip:hover::after {
+    content: attr(data-tooltip);
+    @apply absolute z-10 bg-gray-800 text-white text-sm rounded-md p-2 -top-10 left-1/2 transform -translate-x-1/2;
+    min-width: 200px;
+}
+
+#progress-bar .bg-blue-500 {
+    transition: width 0.3s ease;
+}
+
+.card {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.high-risk {
+    @apply bg-red-200 dark:bg-red-900 px-1 rounded;
+}
+
+.medium-risk {
+    @apply bg-yellow-200 dark:bg-yellow-900 px-1 rounded;
+}
+
+.safe {
+    @apply bg-green-200 dark:bg-green-900 px-1 rounded;
+}
