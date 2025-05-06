@@ -2,8 +2,23 @@
 @import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
 
 /* Custom Styles */
+:root {
+    --light-blue-500: #60A5FA;
+    --light-blue-600: #3B82F6;
+    --white: #FFFFFF;
+    --gray-100: #F3F4F6;
+    --gray-700: #374151;
+    --red-500: #EF4444;
+    --yellow-500: #FBBF24;
+    --green-500: #10B981;
+}
+
 body {
     font-family: 'Inter', sans-serif;
+}
+
+header {
+    background: linear-gradient(90deg, var(--light-blue-500), var(--light-blue-600));
 }
 
 #drop-zone {
@@ -11,7 +26,7 @@ body {
 }
 
 #drop-zone:hover {
-    @apply border-blue-500 bg-blue-50 dark:bg-blue-900;
+    @apply border-light-blue-500 bg-light-blue-50 dark:bg-gray-700;
 }
 
 .ripple {
@@ -44,29 +59,35 @@ body {
 }
 
 .glow-input:focus {
-    @apply border-blue-500 ring-2 ring-blue-200 dark:ring-blue-700;
+    @apply border-light-blue-500 ring-2 ring-light-blue-200 dark:ring-gray-700;
 }
 
 .tooltip {
-    @apply relative;
+    @apply relative cursor-pointer;
 }
 
 .tooltip:hover::after {
     content: attr(data-tooltip);
     @apply absolute z-10 bg-gray-800 text-white text-sm rounded-md p-2 -top-10 left-1/2 transform -translate-x-1/2;
     min-width: 200px;
+    animation: fadeIn 0.2s ease;
 }
 
-#progress-bar .bg-blue-500 {
-    transition: width 0.3s ease;
+#progress-bar .bg-light-blue-500 {
+    transition: width 0.5s ease;
 }
 
-.card {
-    @apply bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6;
+.shadow-neumorphic {
+    box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.1), -8px -8px 16px rgba(255, 255, 255, 0.9);
+    transition: box-shadow 0.3s ease;
+}
+
+.shadow-neumorphic:hover {
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.15), -4px -4px 8px rgba(255, 255, 255, 1);
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -84,4 +105,8 @@ body {
 
 .safe {
     @apply bg-green-200 dark:bg-green-900 px-1 rounded;
+}
+
+button:disabled {
+    @apply cursor-not-allowed opacity-50;
 }
