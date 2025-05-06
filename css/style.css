@@ -23,7 +23,7 @@
 
 /* Base Styles */
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     line-height: 1.5;
     min-height: 100vh;
     display: flex;
