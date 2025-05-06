@@ -159,6 +159,14 @@ const utils = {
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    },
+
+    /**
+     * Checks if File API is supported
+     * @returns {boolean}
+     */
+    isFileAPISupported: () => {
+        return window.File && window.FileReader && window.FileList && window.Blob;
     }
 };
 
@@ -203,12 +211,19 @@ const fileHandler = {
         'image/png',
         'image/jpeg'
     ],
+    maxFileSize: 10 * 1024 * 1024, // 10MB
 
     /**
      * Handles file uploads via drag-and-drop or input
      * @param {FileList} files - Files to process
      */
     handleFiles: async (files) => {
+        if (!utils.isFileAPISupported()) {
+            utils.showStatus('File API not supported in this browser', 'error');
+            utils.log('File API not supported', 'error');
+            return;
+        }
+
         if (!files || files.length === 0) {
             utils.showStatus('No files selected', 'error');
             utils.log('No files selected', 'error');
@@ -226,27 +241,41 @@ const fileHandler = {
         }
 
         for (const file of newFiles) {
-            if (!fileHandler.validTypes.includes(file.type)) {
-                utils.showStatus(`Unsupported file: ${file.name}`, 'error');
-                utils.log(`Rejected file ${file.name}: Invalid type ${file.type}`, 'error');
-                continue;
+            try {
+                if (!fileHandler.validTypes.includes(file.type)) {
+                    utils.showStatus(`Unsupported file type: ${file.name}`, 'error');
+                    utils.log(`Rejected file ${file.name}: Invalid type ${file.type}`, 'error');
+                    continue;
+                }
+                if (file.size > fileHandler.maxFileSize) {
+                    utils.showStatus(`File too large: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`, 'error');
+                    utils.log(`Rejected file ${file.name}: Size ${file.size} exceeds ${fileHandler.maxFileSize}`, 'error');
+                    continue;
+                }
+                state.filesContent.push({ name: file.name, file });
+                DOM.fileList.innerHTML += `
+                    <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded transition">
+                        <span class="text-sm text-gray-600 dark:text-gray-300">${utils.escapeHTML(file.name)}</span>
+                        <button class="remove-file text-red-600 hover:text-red-700 p-1" data-name="${utils.escapeHTML(file.name)}" aria-label="Remove file">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>`;
+                utils.log(`Added file: ${file.name}`);
+            } catch (err) {
+                utils.showStatus(`Error processing ${file.name}: ${err.message}`, 'error');
+                utils.log(`Error processing ${file.name}: ${err.message}`, 'error');
             }
-            state.filesContent.push({ name: file.name, file });
-            DOM.fileList.innerHTML += `
-                <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded transition">
-                    <span class="text-sm text-gray-600 dark:text-gray-300">${utils.escapeHTML(file.name)}</span>
-                    <button class="remove-file text-red-600 hover:text-red-700 p-1" data-name="${utils.escapeHTML(file.name)}" aria-label="Remove file">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>`;
-            utils.log(`Added file: ${file.name}`);
         }
 
         DOM.scanBtn.disabled = state.filesContent.length === 0;
-        DOM.fileInput.value = ''; // Reset file input
-        utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, 'success');
+        utils.showStatus(
+            state.filesContent.length > 0 
+                ? `${state.filesContent.length} file(s) ready to scan` 
+                : 'No files selected', 
+            state.filesContent.length > 0 ? 'success' : 'info'
+        );
         fileHandler.bindRemoveButtons();
     },
 
@@ -255,7 +284,9 @@ const fileHandler = {
      */
     bindRemoveButtons: () => {
         document.querySelectorAll('.remove-file').forEach(button => {
-            button.removeEventListener('click', button._handler); // Prevent duplicates
+            if (button._handler) {
+                button.removeEventListener('click', button._handler);
+            }
             button._handler = () => {
                 const name = button.dataset.name;
                 state.filesContent = state.filesContent.filter(f => f.name !== name);
