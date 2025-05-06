@@ -1,78 +1,119 @@
-/* ScanShield Styling */
-/* Professional, modern, and elegant design with Tailwind CSS */
-
 /* Tailwind CSS CDN */
 @import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
 
-/* Color Palette */
+/* Standard Color Palette */
 :root {
-    --blue-600: #1E40AF; /* Primary Blue */
-    --blue-700: #1E3A8A; /* Darker Blue */
-    --white: #F9FAFB; /* Clean White */
-    --gray-50: #F9FAFB; /* Light Gray */
-    --gray-100: #F3F4F6; /* Card Background */
-    --gray-200: #E5E7EB; /* Borders */
-    --gray-500: #6B7280; /* Text */
-    --gray-600: #4B5563; /* Dark Text */
-    --gray-700: #374151; /* Dark Mode Card */
-    --gray-900: #111827; /* Dark Mode Background */
+    --blue-600: #2563EB;
+    --blue-700: #1D4ED8;
+    --white: #FFFFFF;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-500: #6B7280;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --red-600: #DC2626;
+    --yellow-500: #F59E0B;
+    --green-600: #10B981;
 }
 
 /* Base Styles */
 body {
-    font-family: 'Inter', system-ui, sans-serif;
-    line-height: 1.5;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    font-family: 'Inter', sans-serif;
 }
 
 header {
     background-color: var(--blue-600);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Card */
+.shadow-md {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-main {
-    flex: 1;
+/* Input */
+input, select {
+    transition: all 0.3s ease;
 }
 
-/* Card Styling */
-.shadow-lg {
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.shadow-lg:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 15px 20px rgba(0, 0, 0, 0.15);
-}
-
-/* Inputs */
-input {
-    transition: all 0.2s ease;
-    border: 1px solid var(--gray-200);
-}
-
-input:focus {
-    outline: none;
+input:focus, select:focus {
     border-color: var(--blue-600);
-    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-/* Buttons */
-button {
+/* Ripple Effect */
+.ripple {
     position: relative;
     overflow: hidden;
 }
 
-/* Drop Zone */
-#drop-zone {
+.ripple::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1);
+    transform-origin: center;
     transition: all 0.3s ease;
 }
 
-#drop-zone:hover {
-    background-color: var(--gray-50);
-    border-color: var(--blue-600);
+.ripple:hover::after {
+    opacity: 1;
+    transform: scale(50);
+}
+
+/* Tooltip */
+.tooltip {
+    position: relative;
+}
+
+.tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    z-index: 10;
+    background: var(--gray-700);
+    color: var(--white);
+    font-size: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    top: -2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 200px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.2s ease;
+}
+
+/* Progress Bar */
+#progress-bar .bg-blue-600 {
+    transition: width 0.5s ease;
+}
+
+/* Risk Highlights */
+.high-risk {
+    background: rgba(220, 38, 38, 0.2);
+    padding: 0.2rem;
+    border-radius: 0.25rem;
+    color: var(--red-600);
+}
+
+.medium-risk {
+    background: rgba(245, 158, 11, 0.2);
+    padding: 0.2rem;
+    border-radius: 0.25rem;
+    color: var(--yellow-500);
+}
+
+.safe {
+    background: rgba(16, 185, 129, 0.2);
+    padding: 0.2rem;
+    border-radius: 0.25rem;
+    color: var(--green-600);
 }
 
 /* Animations */
@@ -89,33 +130,4 @@ button {
 button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--gray-100);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--blue-600);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--blue-700);
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    header {
-        flex-direction: column;
-        gap: 1rem;
-    }
-    #drop-zone {
-        padding: 1.5rem;
-    }
 }
