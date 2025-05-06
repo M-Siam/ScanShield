@@ -1,7 +1,10 @@
 // === ScanShield Core Logic ===
-// Robust, professional client-side document and image scanner
+// Professional, robust, and elegant client-side document and image scanner
+// Designed for reliability, beauty, and comprehensive functionality
 
+// ============================================================================
 // DOM Elements
+// ============================================================================
 const DOM = {
     dropZone: document.getElementById('drop-zone'),
     fileInput: document.getElementById('file-input'),
@@ -26,17 +29,21 @@ const DOM = {
     logContent: document.getElementById('log-content')
 };
 
+// ============================================================================
 // State Management
+// ============================================================================
 const state = {
-    filesContent: [],
-    scanResults: [],
-    sanitizedContent: [],
-    logs: [],
-    isScanning: false,
-    theme: localStorage.getItem('theme') || 'light'
+    filesContent: [], // Array of { name, file } objects
+    scanResults: [], // Array of scan results
+    sanitizedContent: [], // Array of sanitized content
+    logs: [], // Array of log messages
+    isScanning: false, // Scanning status
+    theme: localStorage.getItem('theme') || 'light' // Theme preference
 };
 
-// Enhanced Regex Patterns
+// ============================================================================
+// Regex Patterns for Privacy Detection
+// ============================================================================
 const patterns = {
     en: {
         email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
@@ -64,7 +71,9 @@ const patterns = {
     }
 };
 
-// Risk Weights
+// ============================================================================
+// Risk Weights for Privacy Scoring
+// ============================================================================
 const riskWeights = {
     email: 10,
     phone: 15,
@@ -74,23 +83,51 @@ const riskWeights = {
     keywords: 5
 };
 
+// ============================================================================
 // Utility Functions
+// ============================================================================
 const utils = {
+    /**
+     * Logs a message to the UI and console
+     * @param {string} message - Log message
+     * @param {string} type - Log type (info, warn, error)
+     */
     log: (message, type = 'info') => {
         const timestamp = new Date().toISOString();
         state.logs.push(`[${timestamp}] [${type.toUpperCase()}] ${message}`);
-        DOM.logContent.textContent = state.logs.slice(-50).join('\n');
+        DOM.logContent.textContent = state.logs.slice(-100).join('\n');
         DOM.scanLog.classList.remove('hidden');
-        console.log(`[${type}] ${message}`);
+        console[type === 'error' ? 'error' : type === 'warn' ? 'warn' : 'log'](`[${type}] ${message}`);
     },
+
+    /**
+     * Displays a status message to the user
+     * @param {string} message - Status message
+     * @param {string} type - Message type (info, success, error)
+     */
     showStatus: (message, type = 'info') => {
         DOM.statusMessage.textContent = message;
-        DOM.statusMessage.className = `mt-4 text-sm ${type === 'error' ? 'text-red-600' : type === 'success' ? 'text-green-600' : 'text-gray-500'}`;
+        DOM.statusMessage.className = `mt-4 text-sm ${
+            type === 'error' ? 'text-red-600' :
+            type === 'success' ? 'text-green-600' :
+            'text-gray-500 dark:text-gray-400'
+        }`;
     },
+
+    /**
+     * Clears the status message
+     */
     clearStatus: () => {
         DOM.statusMessage.textContent = '';
-        DOM.statusMessage.className = 'mt-4 text-sm text-gray-500';
+        DOM.statusMessage.className = 'mt-4 text-sm text-gray-500 dark:text-gray-400';
     },
+
+    /**
+     * Debounces a function to prevent rapid calls
+     * @param {Function} func - Function to debounce
+     * @param {number} wait - Wait time in ms
+     * @returns {Function}
+     */
     debounce: (func, wait) => {
         let timeout;
         return (...args) => {
@@ -98,18 +135,40 @@ const utils = {
             timeout = setTimeout(() => func(...args), wait);
         };
     },
+
+    /**
+     * Normalizes text for consistent processing
+     * @param {string} text - Input text
+     * @returns {string} Normalized text
+     */
     normalizeText: (text) => {
         if (!text) return '';
         return text
-            .replace(/\s+/g, ' ') // Normalize whitespace
-            .replace(/[\r\n]+/g, '\n') // Normalize line breaks
-            .replace(/[^\x20-\x7E\n]/g, '') // Remove non-printable characters
+            .replace(/\s+/g, ' ')
+            .replace(/[\r\n]+/g, '\n')
+            .replace(/[^\x20-\x7E\n]/g, '')
             .trim();
+    },
+
+    /**
+     * Escapes HTML to prevent XSS
+     * @param {string} str - Input string
+     * @returns {string} Escaped string
+     */
+    escapeHTML: (str) => {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 };
 
+// ============================================================================
 // Theme Management
+// ============================================================================
 const themeManager = {
+    /**
+     * Initializes the theme based on user preference
+     */
     init: () => {
         if (state.theme === 'dark') {
             document.body.classList.add('dark');
@@ -120,16 +179,22 @@ const themeManager = {
         }
         utils.log(`Initialized theme: ${state.theme}`);
     },
+
+    /**
+     * Toggles between dark and light themes
+     */
     toggle: () => {
         document.body.classList.toggle('dark');
         state.theme = document.body.classList.contains('dark') ? 'dark' : 'light';
         DOM.themeToggle.querySelector('img').src = state.theme === 'dark' ? 'assets/icons/sun.svg' : 'assets/icons/moon.svg';
         localStorage.setItem('theme', state.theme);
-        utils.log(`Theme switched to ${state.theme}`);
+        utils.log(`Switched to ${state.theme} theme`);
     }
 };
 
+// ============================================================================
 // File Handling
+// ============================================================================
 const fileHandler = {
     validTypes: [
         'application/pdf',
@@ -138,20 +203,28 @@ const fileHandler = {
         'image/png',
         'image/jpeg'
     ],
+
+    /**
+     * Handles file uploads via drag-and-drop or input
+     * @param {FileList} files - Files to process
+     */
     handleFiles: async (files) => {
         if (!files || files.length === 0) {
             utils.showStatus('No files selected', 'error');
             utils.log('No files selected', 'error');
             return;
         }
+
         const newFiles = Array.from(files).filter(file => 
             !state.filesContent.some(f => f.name === file.name && f.file.size === file.size)
         );
+
         if (newFiles.length === 0) {
             utils.showStatus('All selected files are already uploaded', 'error');
             utils.log('Duplicate files rejected', 'warn');
             return;
         }
+
         for (const file of newFiles) {
             if (!fileHandler.validTypes.includes(file.type)) {
                 utils.showStatus(`Unsupported file: ${file.name}`, 'error');
@@ -160,37 +233,59 @@ const fileHandler = {
             }
             state.filesContent.push({ name: file.name, file });
             DOM.fileList.innerHTML += `
-                <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                    <span class="text-sm text-gray-600 dark:text-gray-300">${file.name}</span>
-                    <button class="remove-file text-red-600 hover:text-red-700" data-name="${file.name}">✕</button>
+                <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded transition">
+                    <span class="text-sm text-gray-600 dark:text-gray-300">${utils.escapeHTML(file.name)}</span>
+                    <button class="remove-file text-red-600 hover:text-red-700 p-1" data-name="${utils.escapeHTML(file.name)}" aria-label="Remove file">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
                 </div>`;
             utils.log(`Added file: ${file.name}`);
         }
+
         DOM.scanBtn.disabled = state.filesContent.length === 0;
+        DOM.fileInput.value = ''; // Reset file input
         utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, 'success');
         fileHandler.bindRemoveButtons();
-        DOM.fileInput.value = ''; // Reset file input
     },
+
+    /**
+     * Binds click events to remove file buttons
+     */
     bindRemoveButtons: () => {
         document.querySelectorAll('.remove-file').forEach(button => {
-            button.removeEventListener('click', button._handler); // Prevent duplicate listeners
+            button.removeEventListener('click', button._handler); // Prevent duplicates
             button._handler = () => {
                 const name = button.dataset.name;
                 state.filesContent = state.filesContent.filter(f => f.name !== name);
                 button.parentElement.remove();
                 DOM.scanBtn.disabled = state.filesContent.length === 0;
                 utils.log(`Removed file: ${name}`);
-                utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, state.filesContent.length > 0 ? 'success' : 'info');
+                utils.showStatus(
+                    state.filesContent.length > 0 
+                        ? `${state.filesContent.length} file(s) ready to scan` 
+                        : 'No files selected', 
+                    state.filesContent.length > 0 ? 'success' : 'info'
+                );
             };
             button.addEventListener('click', button._handler);
         });
     },
+
+    /**
+     * Reads file content based on type
+     * @param {File} file - File to read
+     * @param {number} retryCount - Retry attempt
+     * @returns {Promise<string>} Extracted text
+     */
     readFile: async (file, retryCount = 0) => {
         const maxRetries = 3;
         return new Promise((resolve, reject) => {
             if (file.type === 'application/pdf') {
                 if (!window.pdfjsLib) {
                     reject('pdf.js library not loaded');
+                    utils.log('pdf.js not loaded', 'error');
                     return;
                 }
                 const reader = new FileReader();
@@ -292,6 +387,12 @@ const fileHandler = {
             }
         });
     },
+
+    /**
+     * Extracts metadata from PDF files
+     * @param {File} file - File to process
+     * @returns {Promise<Object>} Metadata object
+     */
     extractMetadata: async (file) => {
         const metadata = {};
         if (file.type === 'application/pdf') {
@@ -320,10 +421,21 @@ const fileHandler = {
     }
 };
 
+// ============================================================================
 // Scanner Logic
+// ============================================================================
 const scanner = {
+    /**
+     * Scans content for privacy-sensitive data
+     * @param {string} content - Text to scan
+     * @param {string} lang - Language for patterns
+     * @returns {Object} Scan results
+     */
     scanContent: (content, lang) => {
-        if (!content) return { emails: [], phones: [], ids: [], addresses: [], urls: [], keywords: [] };
+        if (!content) {
+            utils.log('No content to scan', 'warn');
+            return { emails: [], phones: [], ids: [], addresses: [], urls: [], keywords: [] };
+        }
         const result = {
             emails: [],
             phones: [],
@@ -336,12 +448,19 @@ const scanner = {
             const matches = content.match(pattern) || [];
             result[type] = matches.map(match => ({
                 value: match,
-                risk: type === 'email' || type === 'phone' || type === 'id' ? 'high' : type === 'address' || type === 'keywords' ? 'medium' : 'low'
+                risk: type === 'email' || type === 'phone' || type === 'id' ? 'high' : 
+                      type === 'address' || type === 'keywords' ? 'medium' : 'low'
             }));
         }
         utils.log('Content scan completed');
         return result;
     },
+
+    /**
+     * Calculates privacy score based on scan results
+     * @param {Array} results - Scan results
+     * @returns {Object} Score and risk level
+     */
     calculateScore: (results) => {
         let score = 100;
         let totalFindings = 0;
@@ -356,6 +475,12 @@ const scanner = {
         utils.log(`Privacy score: ${score} (${riskLevel})`);
         return { score, riskLevel, totalFindings };
     },
+
+    /**
+     * Sanitizes content by redacting sensitive data
+     * @param {Object} file - File scan result
+     * @returns {string} Sanitized content
+     */
     sanitizeContent: (file) => {
         let content = file.content || '';
         file.result.emails.forEach(m => content = content.replaceAll(m.value, '[EMAIL REDACTED]'));
@@ -369,8 +494,13 @@ const scanner = {
     }
 };
 
+// ============================================================================
 // UI Renderer
+// ============================================================================
 const renderer = {
+    /**
+     * Displays scan results in the UI
+     */
     displayResults: () => {
         DOM.results.classList.add('fade-in');
         const { score, riskLevel, totalFindings } = scanner.calculateScore(state.scanResults);
@@ -380,7 +510,9 @@ const renderer = {
         DOM.scoreText.textContent = totalFindings > 0 ? `${score}/100 (${riskLevel} Risk)` : '100/100 (No Risks)';
         DOM.scoreBreakdown.innerHTML = state.scanResults.flatMap(file => 
             Object.entries(file.result).map(([type, matches]) => 
-                `<p>${type.charAt(0).toUpperCase() + type.slice(1)}: ${matches.length}</p>`
+                `<p class="flex justify-between"><span>${
+                    type.charAt(0).toUpperCase() + type.slice(1)
+                }</span><span>${matches.length}</span></p>`
             )
         ).join('') || '<p>No sensitive data detected</p>';
         utils.log(`Displayed score: ${score}`);
@@ -390,7 +522,9 @@ const renderer = {
             if (Object.keys(fileResult.metadata).length) {
                 DOM.metadataSection.classList.remove('hidden');
                 DOM.metadataList.innerHTML = Object.entries(fileResult.metadata).map(([key, value]) => 
-                    `<li>${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}</li>`
+                    `<li class="flex justify-between"><span>${
+                        key.charAt(0).toUpperCase() + key.slice(1)
+                    }</span><span>${utils.escapeHTML(value)}</span></li>`
                 ).join('');
                 utils.log(`Displayed metadata for ${fileResult.name}`);
             }
@@ -402,20 +536,21 @@ const renderer = {
             let displayContent = fileResult.content || 'No text extracted';
             for (const [type, matches] of Object.entries(fileResult.result)) {
                 matches.forEach(match => {
-                    const className = match.risk === 'high' ? 'high-risk' : match.risk === 'medium' ? 'medium-risk' : 'safe';
+                    const className = match.risk === 'high' ? 'high-risk' : 
+                                    match.risk === 'medium' ? 'medium-risk' : 'safe';
                     const tooltip = match.risk === 'high' 
                         ? 'High risk: Remove to avoid privacy issues.' 
                         : match.risk === 'medium' 
                         ? 'Medium risk: Review before sharing.' 
                         : 'Low risk: Generally safe.';
                     displayContent = displayContent.replaceAll(match.value, 
-                        `<span class="${className} tooltip" data-tooltip="${tooltip}">${match.value}</span>`
+                        `<span class="${className} tooltip" data-tooltip="${tooltip}">${utils.escapeHTML(match.value)}</span>`
                     );
                 });
             }
             DOM.beforeContent.innerHTML += `
-                <h5 class="font-medium mt-4">${fileResult.name}</h5>
-                <p>${displayContent}</p>`;
+                <h5 class="font-medium mt-4 text-gray-900 dark:text-gray-100">${utils.escapeHTML(fileResult.name)}</h5>
+                <p class="whitespace-pre-wrap">${displayContent}</p>`;
         });
         utils.log('Displayed content');
 
@@ -425,35 +560,44 @@ const renderer = {
         DOM.exportOptions.classList.remove('hidden');
         utils.showStatus('Scan completed', 'success');
     },
+
+    /**
+     * Updates the progress bar
+     * @param {number} progress - Progress percentage
+     */
     updateProgress: (progress) => {
         DOM.progressBar.querySelector('div').style.width = `${progress}%`;
     }
 };
 
+// ============================================================================
 // Event Listeners
+// ============================================================================
 const initEvents = () => {
     // Theme Toggle
-    DOM.themeToggle.addEventListener('click', themeManager.toggle);
+    DOM.themeToggle.addEventListener('click', () => {
+        themeManager.toggle();
+    });
 
     // Drag and Drop
-    const handleDragOver = utils.debounce((e) => {
+    const handleDrag = utils.debounce((e) => {
         e.preventDefault();
         e.stopPropagation();
-        DOM.dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
-    }, 100);
-    DOM.dropZone.addEventListener('dragover', handleDragOver);
-    DOM.dropZone.addEventListener('dragenter', handleDragOver);
+        if (e.type === 'dragover' || e.type === 'dragenter') {
+            DOM.dropZone.classList.add('border-blue-600', 'bg-blue-50', 'dark:bg-gray-700');
+        } else if (e.type === 'dragleave') {
+            DOM.dropZone.classList.remove('border-blue-600', 'bg-blue-50', 'dark:bg-gray-700');
+        }
+    }, 50);
 
-    DOM.dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        DOM.dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
+    ['dragenter', 'dragover', 'dragleave'].forEach(event => {
+        DOM.dropZone.addEventListener(event, handleDrag);
     });
 
     DOM.dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        DOM.dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
+        DOM.dropZone.classList.remove('border-blue-600', 'bg-blue-50', 'dark:bg-gray-700');
         fileHandler.handleFiles(e.dataTransfer.files);
         utils.log('Files dropped');
     });
@@ -472,7 +616,10 @@ const initEvents = () => {
 
     // Scan Button
     DOM.scanBtn.addEventListener('click', async () => {
-        if (state.filesContent.length === 0 || state.isScanning) return;
+        if (state.filesContent.length === 0 || state.isScanning) {
+            utils.showStatus('No files to scan or scan in progress', 'error');
+            return;
+        }
         state.isScanning = true;
         DOM.scanBtn.disabled = true;
         DOM.progressBar.classList.remove('hidden');
@@ -516,8 +663,8 @@ const initEvents = () => {
             content: scanner.sanitizeContent(file)
         }));
         DOM.afterContent.innerHTML = state.sanitizedContent.map(file => `
-            <h5 class="font-medium mt-4">${file.name}</h5>
-            <p>${file.content || 'No text extracted'}</p>
+            <h5 class="font-medium mt-4 text-gray-900 dark:text-gray-100">${utils.escapeHTML(file.name)}</h5>
+            <p class="whitespace-pre-wrap">${utils.escapeHTML(file.content || 'No text extracted')}</p>
         `).join('');
         utils.log('Sanitization completed');
         utils.showStatus('Content sanitized', 'success');
@@ -525,7 +672,9 @@ const initEvents = () => {
 
     // Export as TXT
     DOM.exportTxt.addEventListener('click', () => {
-        const text = state.sanitizedContent.map(file => `File: ${file.name}\n${file.content || 'No text extracted'}`).join('\n\n');
+        const text = state.sanitizedContent.map(file => 
+            `File: ${file.name}\n${file.content || 'No text extracted'}`
+        ).join('\n\n');
         const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -543,6 +692,7 @@ const initEvents = () => {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             doc.setFont('Inter', 'normal');
+            doc.setFontSize(12);
             doc.text('ScanShield Sanitized Output', 10, 10);
             let y = 20;
             state.sanitizedContent.forEach(file => {
@@ -566,25 +716,37 @@ const initEvents = () => {
     });
 };
 
+// ============================================================================
 // Initialization
+// ============================================================================
 const init = () => {
+    // Initialize theme
     themeManager.init();
+
+    // Bind event listeners
     initEvents();
+
+    // Log initialization
     utils.log('ScanShield initialized');
+
+    // Set initial status
     utils.showStatus('Ready to scan files');
+
+    // Configure pdf.js worker
     if (window.pdfjsLib) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min.js';
         utils.log('pdf.js loaded');
     } else {
         utils.log('pdf.js not loaded', 'error');
         utils.showStatus('Error: pdf.js not loaded', 'error');
     }
-    // Polyfill for older browsers
+
+    // Add Promise polyfill for older browsers
     if (!window.Promise) {
         utils.log('Adding Promise polyfill', 'warn');
         document.write('<script src="https://cdn.jsdelivr.net/npm/es6-promise@4.2.8/dist/es6-promise.auto.min.js"></script>');
     }
 };
 
-// Start Application
+// Start application
 document.addEventListener('DOMContentLoaded', init);
