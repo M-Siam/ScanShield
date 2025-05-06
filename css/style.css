@@ -1,34 +1,66 @@
 /* Tailwind CSS CDN */
 @import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
 
-/* Custom Styles */
+/* Neon Theme Variables */
 :root {
-    --light-blue-500: #60A5FA;
-    --light-blue-600: #3B82F6;
-    --white: #FFFFFF;
-    --gray-100: #F3F4F6;
-    --gray-700: #374151;
-    --red-500: #EF4444;
-    --yellow-500: #FBBF24;
-    --green-500: #10B981;
+    --neon-blue: #00DDEB;
+    --neon-pink: #FF007A;
+    --neon-green: #39FF14;
+    --neon-purple: #D600FF;
+    --neon-dark: #1A1A2E;
+    --neon-white: #E6E6FA;
+    --neon-gray: #A9A9CC;
+    --neon-gradient: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
 }
 
+/* Base Styles */
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Orbitron', sans-serif;
+    background-color: var(--neon-dark);
+    color: var(--neon-white);
 }
 
 header {
-    background: linear-gradient(90deg, var(--light-blue-500), var(--light-blue-600));
+    background: var(--neon-gradient);
+    box-shadow: 0 0 20px rgba(0, 221, 235, 0.5);
 }
 
-#drop-zone {
+/* Neon Text */
+.neon-text {
+    text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-pink);
+}
+
+.neon-text-blue {
+    text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+}
+
+/* Neon Card */
+.bg-neon-card {
+    background-color: #2A2A4E;
+    box-shadow: 0 0 15px rgba(0, 221, 235, 0.3), inset 0 0 10px rgba(255, 0, 122, 0.2);
+}
+
+/* Neon Shadow */
+.shadow-neon {
+    box-shadow: 0 0 20px rgba(0, 221, 235, 0.5), 0 0 30px rgba(255, 0, 122, 0.3);
+}
+
+/* Glow Effect */
+.glow {
+    filter: drop-shadow(0 0 5px var(--neon-blue));
+}
+
+.glow-input {
+    border: 2px solid var(--neon-blue);
     transition: all 0.3s ease;
 }
 
-#drop-zone:hover {
-    @apply border-light-blue-500 bg-light-blue-50 dark:bg-gray-700;
+.glow-input:focus {
+    border-color: var(--neon-pink);
+    box-shadow: 0 0 10px var(--neon-pink);
 }
 
+/* Ripple Effect */
 .ripple {
     position: relative;
     overflow: hidden;
@@ -54,38 +86,59 @@ header {
     transform: scale(50);
 }
 
-.glow-input {
-    @apply border-2 border-gray-300 dark:border-gray-600 rounded-md p-2 transition-all;
-}
-
-.glow-input:focus {
-    @apply border-light-blue-500 ring-2 ring-light-blue-200 dark:ring-gray-700;
-}
-
+/* Tooltip */
 .tooltip {
-    @apply relative cursor-pointer;
+    position: relative;
 }
 
 .tooltip:hover::after {
     content: attr(data-tooltip);
-    @apply absolute z-10 bg-gray-800 text-white text-sm rounded-md p-2 -top-10 left-1/2 transform -translate-x-1/2;
+    position: absolute;
+    z-index: 10;
+    background: var(--neon-dark);
+    color: var(--neon-white);
+    text-shadow: 0 0 5px var(--neon-blue);
+    font-size: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    top: -2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
     min-width: 200px;
+    box-shadow: 0 0 10px var(--neon-pink);
     animation: fadeIn 0.2s ease;
 }
 
-#progress-bar .bg-light-blue-500 {
+/* Progress Bar */
+#progress-bar .bg-neon-blue {
+    background: var(--neon-blue);
+    box-shadow: 0 0 10px var(--neon-blue);
     transition: width 0.5s ease;
 }
 
-.shadow-neumorphic {
-    box-shadow: 8px 8px 16px rgba(0, 0, 0, 0.1), -8px -8px 16px rgba(255, 255, 255, 0.9);
-    transition: box-shadow 0.3s ease;
+/* Risk Highlights */
+.high-risk {
+    background: rgba(255, 0, 0, 0.3);
+    padding: 0.2rem;
+    border-radius: 0.25rem;
+    text-shadow: 0 0 5px red;
 }
 
-.shadow-neumorphic:hover {
-    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.15), -4px -4px 8px rgba(255, 255, 255, 1);
+.medium-risk {
+    background: rgba(255, 255, 0, 0.3);
+    padding: 0.2rem;
+    border-radius: 0.25rem;
+    text-shadow: 0 0 5px yellow;
 }
 
+.safe {
+    background: rgba(57, 255, 20, 0.3);
+    padding: 0.2rem;
+    border-radius: 0.25rem;
+    text-shadow: 0 0 5px var(--neon-green);
+}
+
+/* Animations */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
@@ -95,18 +148,19 @@ header {
     animation: fadeIn 0.5s ease forwards;
 }
 
-.high-risk {
-    @apply bg-red-200 dark:bg-red-900 px-1 rounded;
+@keyframes pulse {
+    0% { box-shadow: 0 0 10px var(--neon-blue); }
+    50% { box-shadow: 0 0 20px var(--neon-pink); }
+    100% { box-shadow: 0 0 10px var(--neon-blue); }
 }
 
-.medium-risk {
-    @apply bg-yellow-200 dark:bg-yellow-900 px-1 rounded;
+.pulse {
+    animation: pulse 2s infinite;
 }
 
-.safe {
-    @apply bg-green-200 dark:bg-green-900 px-1 rounded;
-}
-
+/* Disabled Button */
 button:disabled {
-    @apply cursor-not-allowed opacity-50;
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
 }
