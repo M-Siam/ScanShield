@@ -1,65 +1,84 @@
 ScanShield — Smart Document Risk Checker
-Protect your privacy before you share documents or images. Instantly scan for emails, phone numbers, IDs, addresses, and metadata — 100% free and offline.
+A powerful, neon-themed, client-side tool to scan documents and images for privacy risks (emails, phone numbers, IDs, addresses, URLs, keywords) with sanitization and export options. 100% free and offline.
 Features
 
-Upload and Scan: Drag-and-drop or click to upload PDF, DOCX, TXT, PNG, or JPG files.
-Privacy Risk Detection: Detects emails, phone numbers, national IDs, addresses, tracking URLs, and sensitive keywords.
-Image Scanning: Extracts text from images using OCR (Tesseract.js).
-Risk Analysis: Color-coded highlights (High, Medium, Low risk) with tooltips.
-Sanitization: Remove or replace risky information with a split-view (Before/After).
-Privacy Score: 0–100 score with breakdown of findings.
-Metadata Checker: Extracts author, creation date, etc., from PDFs.
-Offline Support: No server or cloud APIs, 100% client-side.
-Export Options: Save sanitized content as TXT or PDF.
-Responsive Design: Mobile-first with dark/light mode toggle and modern light blue/white theme.
+Upload and Scan: Drag-and-drop PDF, DOCX, TXT, PNG, JPG files.
+Privacy Risk Detection: Detects emails, phone numbers, IDs, addresses, tracking URLs, and sensitive keywords.
+Image Scanning: OCR via Tesseract.js for PNG/JPG.
+Risk Analysis: Color-coded highlights (High, Medium, Low) with tooltips.
+Sanitization: Split-view (Before/After) with redacted sensitive data.
+Privacy Score: 0–100 score with detailed breakdown.
+Metadata Checker: Extracts PDF metadata (author, creation date, etc.).
+Offline Support: No server or APIs, fully client-side.
+Export Options: TXT and PDF exports.
+Neon Theme: Vibrant cyberpunk design with dark/light mode toggle.
+Multi-Language: Supports English, Spanish, French patterns.
+Scan Log: Detailed processing logs for debugging.
 
-Deploy to GitHub Pages (No Git Installation Required)
+Deploy to GitHub Pages (No Git Required)
 
-Download Files: Save all files from this project into a folder named ScanShield.
-Download Dependencies:
-pdf.min.js and pdf.worker.min.js: From https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/.
-mammoth.browser.min.js: From https://cdn.jsdelivr.net/npm/mammoth@1.6.0/.
-tesseract.min.js: From https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js.
-Place these in the js/ folder.
+Save Files:
+
+Create a folder named ScanShield.
+Copy all files from this project into the folder, maintaining the structure (css/, js/, assets/fonts/, assets/icons/).
 
 
-Create a GitHub Repository:
+Download Dependencies (Optional, as CDN is used):
+
+pdf.min.js: https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js
+pdf.worker.min.js: https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js
+mammoth.browser.min.js: https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js
+tesseract.min.js: https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js
+Place in js/ as a fallback (CDN is used by default).
+
+
+Create GitHub Repository:
+
 Go to https://github.com/new.
-Name it ScanShield and create it (public or private).
+Name it ScanShield and create (public or private).
 
 
 Upload Files:
-In your GitHub repository, click "Add file" > "Upload files".
-Drag and drop the entire ScanShield folder or upload files individually, maintaining the folder structure.
+
+In the repository, click "Add file" > "Upload files".
+Drag and drop the ScanShield folder or upload files individually, preserving the structure.
 Click "Commit changes".
 
 
 Enable GitHub Pages:
-Go to the repository's "Settings" tab.
-Scroll to "Pages" in the left sidebar.
-Under "Branch", select main and root folder (/), then click "Save".
-Wait a few minutes, then access your site at https://your-username.github.io/ScanShield.
+
+Go to repository "Settings" > "Pages".
+Set source to main branch and root folder (/).
+Save. Wait a few minutes, then access at https://your-username.github.io/ScanShield.
 
 
 
 Test Locally
 
-Open index.html in a browser (e.g., Chrome) to test the application locally.
-Ensure all js/ files (pdf.min.js, pdf.worker.min.js, mammoth.browser.min.js, tesseract.min.js) are in place.
+Open index.html in a browser (e.g., Chrome).
+If CDN fails, ensure js/ files are downloaded and present.
 
 Dependencies
 
-pdf.js: For PDF parsing (js/pdf.min.js, js/pdf.worker.min.js).
-mammoth.js: For DOCX parsing (js/mammoth.browser.min.js).
-Tesseract.js: For image OCR (js/tesseract.min.js).
-Tailwind CSS: For styling (via CDN in css/style.css).
-Inter Font: For typography (assets/fonts/inter.css).
-jsPDF: For PDF export (via CDN in index.html).
+pdf.js: PDF parsing (CDN + local fallback).
+mammoth.js: DOCX parsing (CDN + local fallback).
+Tesseract.js: Image OCR (CDN + local fallback).
+jsPDF: PDF export (CDN).
+Tailwind CSS: Styling (CDN).
+Orbitron Font: Neon typography (via assets/fonts/orbitron.css).
+
+Troubleshooting
+
+"pdfjsLib is not defined": Ensure internet connection for CDN or download pdf.min.js and pdf.worker.min.js to js/.
+File Not Processing: Verify file type (PDF, DOCX, TXT, PNG, JPG) and size (<10MB recommended for images).
+Theme Issues: Clear browser cache or hard refresh (Ctrl+F5).
+Slow Image Scanning: OCR is resource-intensive; test with small images first.
 
 Notes
 
-The project works offline after the initial load, with all assets stored locally.
-Image scanning may take longer due to OCR processing; ensure a stable internet connection for the first load to fetch Tesseract.js.
+Works offline after initial load (if local js/ files are used).
+Image OCR may take seconds to minutes depending on file size and device.
+For best neon effect, use a dark environment or dark mode.
 
 License
 MIT License
