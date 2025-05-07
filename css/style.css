@@ -1,7 +1,15 @@
-/* Custom CSS for ScanShield (Tailwind handles most styling) */
+/* Tailwind CSS Base (generated and minified for GitHub Pages) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @font-face {
     font-family: 'Inter';
     src: url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+}
+
+body {
+    font-family: 'Inter', sans-serif;
 }
 
 .tooltip {
@@ -49,4 +57,35 @@
     padding: 0.2rem;
     border-radius: 0.25rem;
     color: #10B981;
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.3s ease-in;
+}
+
+#toast {
+    z-index: 1000;
+}
+
+/* Ensure file input is visible but styled */
+#file-input {
+    display: block;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    background: #ffffff;
+    width: 100%;
+    cursor: pointer;
+}
+
+#file-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.dark #file-input {
+    background: #1f2937;
+    border-color: #4b5563;
 }
