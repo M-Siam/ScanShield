@@ -3,21 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data:; worker-src 'self' blob:">
     <title>ScanShield — Smart Document Risk Checker</title>
-    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="assets/fonts/inter.css">
     <link rel="icon" href="assets/icons/logo.svg">
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 font-inter">
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg hidden animate-fadeIn">
+        <span id="toast-message"></span>
+        <button id="toast-close" class="ml-4 text-white hover:text-gray-200">✕</button>
+    </div>
+
     <header class="bg-blue-600 text-white p-4 flex justify-between items-center shadow-md">
         <div class="flex items-center space-x-2">
             <img src="assets/icons/logo.svg" alt="ScanShield Logo" class="w-8 h-8">
             <h1 class="text-2xl font-bold">ScanShield</h1>
         </div>
-        <button id="theme-toggle" class="p-2 rounded-full hover:bg-blue-700 transition">
-            <img src="assets/icons/moon.svg" alt="Toggle Theme" class="w-6 h-6">
-        </button>
+        <div class="flex items-center space-x-2">
+            <button id="clear-cache-btn" class="p-2 rounded-full hover:bg-blue-700 transition" title="Clear Cache">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4M9 7v12m6-12v12"/>
+                </svg>
+            </button>
+            <button id="theme-toggle" class="p-2 rounded-full hover:bg-blue-700 transition">
+                <img src="assets/icons/moon.svg" alt="Toggle Theme" class="w-6 h-6">
+            </button>
+        </div>
     </header>
 
     <main class="container mx-auto p-6 flex flex-col lg:flex-row gap-6">
@@ -27,7 +40,7 @@
             <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-gray-600 p-6 text-center rounded-lg hover:border-blue-500 transition-colors cursor-pointer">
                 <p class="text-lg font-medium">Drag & Drop or Click to Upload</p>
                 <p class="text-sm text-gray-500 mt-1">PDF, DOCX, TXT, PNG, JPG (Max 10MB)</p>
-                <input type="file" id="file-input" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg" multiple class="hidden">
+                <input type="file" id="file-input" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg" multiple class="mt-2">
             </div>
             <div id="file-list" class="mt-4 space-y-2"></div>
             <div class="mt-4">
@@ -96,10 +109,10 @@
     </footer>
 
     <!-- Load Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+    <script src="js/pdf.min.js"></script>
+    <script src="js/mammoth.browser.min.js"></script>
+    <script src="js/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=1"></script>
 </body>
 </html>
