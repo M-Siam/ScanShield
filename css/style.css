@@ -1,73 +1,9 @@
-/* Tailwind CSS CDN */
-@import url('https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css');
-
-/* Standard Color Palette */
-:root {
-    --blue-600: #2563EB;
-    --blue-700: #1D4ED8;
-    --white: #FFFFFF;
-    --gray-100: #F3F4F6;
-    --gray-200: #E5E7EB;
-    --gray-500: #6B7280;
-    --gray-600: #4B5563;
-    --gray-700: #374151;
-    --red-600: #DC2626;
-    --yellow-500: #F59E0B;
-    --green-600: #10B981;
+/* Custom CSS for ScanShield (Tailwind handles most styling) */
+@font-face {
+    font-family: 'Inter';
+    src: url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 }
 
-/* Base Styles */
-body {
-    font-family: 'Inter', sans-serif;
-}
-
-header {
-    background-color: var(--blue-600);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Card */
-.shadow-md {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Input */
-input, select {
-    transition: all 0.3s ease;
-}
-
-input:focus, select:focus {
-    border-color: var(--blue-600);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-/* Ripple Effect */
-.ripple {
-    position: relative;
-    overflow: hidden;
-}
-
-.ripple::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.5);
-    opacity: 0;
-    border-radius: 100%;
-    transform: scale(1);
-    transform-origin: center;
-    transition: all 0.3s ease;
-}
-
-.ripple:hover::after {
-    opacity: 1;
-    transform: scale(50);
-}
-
-/* Tooltip */
 .tooltip {
     position: relative;
 }
@@ -76,8 +12,8 @@ input:focus, select:focus {
     content: attr(data-tooltip);
     position: absolute;
     z-index: 10;
-    background: var(--gray-700);
-    color: var(--white);
+    background: #374151;
+    color: #ffffff;
     font-size: 0.75rem;
     padding: 0.5rem;
     border-radius: 0.25rem;
@@ -89,45 +25,28 @@ input:focus, select:focus {
     animation: fadeIn 0.2s ease;
 }
 
-/* Progress Bar */
-#progress-bar .bg-blue-600 {
-    transition: width 0.5s ease;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* Risk Highlights */
 .high-risk {
     background: rgba(220, 38, 38, 0.2);
     padding: 0.2rem;
     border-radius: 0.25rem;
-    color: var(--red-600);
+    color: #DC2626;
 }
 
 .medium-risk {
     background: rgba(245, 158, 11, 0.2);
     padding: 0.2rem;
     border-radius: 0.25rem;
-    color: var(--yellow-500);
+    color: #F59E0B;
 }
 
 .safe {
     background: rgba(16, 185, 129, 0.2);
     padding: 0.2rem;
     border-radius: 0.25rem;
-    color: var(--green-600);
-}
-
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.fade-in {
-    animation: fadeIn 0.5s ease forwards;
-}
-
-/* Disabled Button */
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    color: #10B981;
 }
