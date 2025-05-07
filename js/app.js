@@ -1,9 +1,8 @@
 // === ScanShield Core Logic ===
-// Professional, production-grade client-side document and image scanner
+// Production-grade client-side document and image scanner, fixed for GitHub Pages and Chrome
 
 /**
  * Module: DOM Elements
- * Centralized DOM references for easy access
  */
 const DOM = {
     dropZone: document.getElementById('drop-zone'),
@@ -26,12 +25,15 @@ const DOM = {
     languageSelect: document.getElementById('language-select'),
     statusMessage: document.getElementById('status-message'),
     scanLog: document.getElementById('scan-log'),
-    logContent: document.getElementById('log-content')
+    logContent: document.getElementById('log-content'),
+    toast: document.getElementById('toast'),
+    toastMessage: document.getElementById('toast-message'),
+    toastClose: document.getElementById('toast-close'),
+    clearCacheBtn: document.getElementById('clear-cache-btn')
 };
 
 /**
  * Module: State Management
- * Centralized state for files, results, and app status
  */
 const state = {
     filesContent: [],
@@ -44,13 +46,12 @@ const state = {
 
 /**
  * Module: Regex Patterns
- * Language-specific patterns for sensitive data detection
  */
 const patterns = {
     en: {
         email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
         phone: /\b(\+\d{1,3}[-.\s]?)?(\d{3}[-.\s]?\d{3}[-.\s]?\d{4}|\(\d{3}\)\s*\d{3}[-.\s]?\d{4})\b/g,
-        id: /\b\d{3}-\d{2}-\d{4}\b/g, // SSN-like
+        id: /\b\d{3}-\d{2}-\d{4}\b/g,
         address: /\b\d{1,5}\s[A-Za-z\s]+(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road)\b/gi,
         url: /\b(https?:\/\/)?([A-Za-z0-9-]+\.[a-z]{2,3}(\/\S*)?|bit\.ly|t\.co|utm_\S+)\b/g,
         keywords: /\b(salary|bank|home|dob|password|ssn)\b/gi
@@ -58,7 +59,7 @@ const patterns = {
     es: {
         email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
         phone: /\b(\+\d{1,3}[-.\s]?)?\d{9}\b/g,
-        id: /\b\d{8}[A-Z]\b/g, // DNI-like
+        id: /\b\d{8}[A-Z]\b/g,
         address: /\b(Calle|Avenida|Plaza)\s[A-Za-z\s]+\d{1,5}\b/gi,
         url: /\b(https?:\/\/)?([A-Za-z0-9-]+\.[a-z]{2,3}(\/\S*)?|bit\.ly|t\.co|utm_\S+)\b/g,
         keywords: /\b(salario|banco|hogar|fecha de nacimiento)\b/gi
@@ -66,7 +67,7 @@ const patterns = {
     fr: {
         email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
         phone: /\b(\+\d{1,3}[-.\s]?)?0\d{9}\b/g,
-        id: /\b\d{12}\b/g, // INSEE-like
+        id: /\b\d{12}\b/g,
         address: /\b\d{1,5}\s(Rue|Avenue|Boulevard)\s[A-Za-z\s]+\b/gi,
         url: /\b(https?:\/\/)?([A-Za-z0-9-]+\.[a-z]{2,3}(\/\S*)?|bit\.ly|t\.co|utm_\S+)\b/g,
         keywords: /\b(salaire|banque|maison|date de naissance)\b/gi
@@ -75,7 +76,6 @@ const patterns = {
 
 /**
  * Module: Risk Weights
- * Scoring weights for privacy risks
  */
 const riskWeights = {
     email: 10,
@@ -88,7 +88,6 @@ const riskWeights = {
 
 /**
  * Module: Utilities
- * Helper functions for logging, status, and DOM manipulation
  */
 const utils = {
     log: (message, type = 'info') => {
@@ -108,12 +107,10 @@ const utils = {
         DOM.statusMessage.textContent = '';
         DOM.statusMessage.className = 'mt-4 text-sm text-gray-500';
     },
-    debounce: (func, wait) => {
-        let timeout;
-        return (...args) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func(...args), wait);
-        };
+    showToast: (message, duration = 3000) => {
+        DOM.toastMessage.textContent = message;
+        DOM.toast.classList.remove('hidden');
+        setTimeout(() => DOM.toast.classList.add('hidden'), duration);
     },
     escapeHTML: (str) => {
         if (!str) return '';
@@ -125,31 +122,57 @@ const utils = {
 
 /**
  * Module: Theme Management
- * Handles dark/light mode with persistence
  */
 const themeManager = {
     init: () => {
-        if (state.theme === 'dark') {
-            document.documentElement.classList.add('dark');
-            DOM.themeToggle.querySelector('img').src = 'assets/icons/sun.svg';
-        } else {
-            document.documentElement.classList.remove('dark');
-            DOM.themeToggle.querySelector('img').src = 'assets/icons/moon.svg';
+        try {
+            if (state.theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                DOM.themeToggle.querySelector('img').src = 'assets/icons/sun.svg';
+            } else {
+                document.documentElement.classList.remove('dark');
+                DOM.themeToggle.querySelector('img').src = 'assets/icons/moon.svg';
+            }
+            utils.log(`Initialized theme: ${state.theme}`);
+        } catch (err) {
+            utils.log(`Theme init error: ${err.message}`, 'error');
         }
-        utils.log(`Initialized theme: ${state.theme}`);
     },
     toggle: () => {
-        document.documentElement.classList.toggle('dark');
-        state.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-        DOM.themeToggle.querySelector('img').src = state.theme === 'dark' ? 'assets/icons/sun.svg' : 'assets/icons/moon.svg';
-        localStorage.setItem('theme', state.theme);
-        utils.log(`Theme switched to ${state.theme}`);
+        try {
+            document.documentElement.classList.toggle('dark');
+            state.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            DOM.themeToggle.querySelector('img').src = state.theme === 'dark' ? 'assets/icons/sun.svg' : 'assets/icons/moon.svg';
+            localStorage.setItem('theme', state.theme);
+            utils.log(`Theme switched to ${state.theme}`);
+        } catch (err) {
+            utils.log(`Theme toggle error: ${err.message}`, 'error');
+        }
+    }
+};
+
+/**
+ * Module: Cache Management
+ */
+const cacheManager = {
+    clear: () => {
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+            state.theme = 'light';
+            themeManager.init();
+            utils.showToast('Cache cleared successfully', 2000);
+            utils.log('Cache cleared');
+            setTimeout(() => location.reload(true), 1000); // Hard reload
+        } catch (err) {
+            utils.showToast('Error clearing cache', 2000);
+            utils.log(`Cache clear error: ${err.message}`, 'error');
+        }
     }
 };
 
 /**
  * Module: File Handling
- * Robust file upload, validation, and parsing
  */
 const fileHandler = {
     validTypes: [
@@ -167,32 +190,37 @@ const fileHandler = {
             utils.clearStatus();
             if (!files || files.length === 0) {
                 utils.showStatus('No files selected', 'error');
+                utils.showToast('No files selected', 2000);
                 return;
             }
             const existingNames = new Set();
             for (const file of Array.from(files)) {
                 if (!fileHandler.validTypes.includes(file.type)) {
                     utils.showStatus(`Unsupported file: ${file.name}`, 'error');
+                    utils.showToast(`Unsupported file: ${file.name}`, 2000);
                     utils.log(`Rejected file ${file.name}: Invalid type ${file.type}`, 'error');
                     continue;
                 }
                 if (file.size > fileHandler.maxFileSize) {
                     utils.showStatus(`File too large: ${file.name} (>10MB)`, 'error');
+                    utils.showToast(`File too large: ${file.name}`, 2000);
                     utils.log(`Rejected file ${file.name}: Size ${file.size} exceeds 10MB`, 'error');
                     continue;
                 }
-                if (existingNames.has(file.name)) {
+                if (existingNames.has(file.name.toLowerCase())) {
                     utils.showStatus(`Duplicate file: ${file.name}`, 'error');
+                    utils.showToast(`Duplicate file: ${file.name}`, 2000);
                     utils.log(`Rejected file ${file.name}: Duplicate`, 'error');
                     continue;
                 }
-                existingNames.add(file.name);
+                existingNames.add(file.name.toLowerCase());
                 state.filesContent.push({ name: file.name, file });
                 DOM.fileList.innerHTML += `
                     <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded">
                         <span class="text-sm text-gray-600 dark:text-gray-300 truncate">${file.name}</span>
                         <button class="remove-file text-red-600 hover:text-red-700" data-name="${file.name}" aria-label="Remove file">✕</button>
                     </div>`;
+                utils.showToast(`Added file: ${file.name}`, 2000);
                 utils.log(`Added file: ${file.name}`);
             }
             DOM.scanBtn.disabled = state.filesContent.length === 0;
@@ -204,24 +232,30 @@ const fileHandler = {
             fileHandler.bindRemoveButtons();
         } catch (err) {
             utils.showStatus('Error handling files', 'error');
+            utils.showToast('Error handling files', 2000);
             utils.log(`File handling error: ${err.message}`, 'error');
         }
     },
     bindRemoveButtons: () => {
-        document.querySelectorAll('.remove-file').forEach(button => {
-            button.addEventListener('click', () => {
-                const name = button.dataset.name;
-                state.filesContent = state.filesContent.filter(f => f.name !== name);
-                button.parentElement.remove();
-                DOM.scanBtn.disabled = state.filesContent.length === 0;
-                utils.log(`Removed file: ${name}`);
-                if (state.filesContent.length === 0) {
-                    utils.showStatus('No files selected');
-                } else {
-                    utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, 'success');
-                }
+        try {
+            document.querySelectorAll('.remove-file').forEach(button => {
+                button.addEventListener('click', () => {
+                    const name = button.dataset.name;
+                    state.filesContent = state.filesContent.filter(f => f.name !== name);
+                    button.parentElement.remove();
+                    DOM.scanBtn.disabled = state.filesContent.length === 0;
+                    utils.showToast(`Removed file: ${name}`, 2000);
+                    utils.log(`Removed file: ${name}`);
+                    if (state.filesContent.length === 0) {
+                        utils.showStatus('No files selected');
+                    } else {
+                        utils.showStatus(`${state.filesContent.length} file(s) ready to scan`, 'success');
+                    }
+                });
             });
-        });
+        } catch (err) {
+            utils.log(`Remove button binding error: ${err.message}`, 'error');
+        }
     },
     readFile: async (file, retryCount = 0) => {
         const maxRetries = 2;
@@ -304,7 +338,7 @@ const fileHandler = {
                                 setTimeout(() => fileHandler.readFile(file, retryCount + 1).then(resolve).catch(reject), 1000);
                             } else {
                                 reject(`Error processing image: ${err.message}`);
-                                utils.log(`Failed to process image ${file.name}: ${err.message}`, 'error');
+                                utils.log(`Failed to read image ${file.name}: ${err.message}`, 'error');
                             }
                         }
                     };
@@ -355,7 +389,6 @@ const fileHandler = {
 
 /**
  * Module: Scanner Logic
- * Core scanning, scoring, and sanitization functions
  */
 const scanner = {
     scanContent: (content, lang) => {
@@ -421,7 +454,6 @@ const scanner = {
 
 /**
  * Module: UI Renderer
- * Handles result display and progress updates
  */
 const renderer = {
     displayResults: () => {
@@ -429,7 +461,6 @@ const renderer = {
             DOM.results.classList.add('animate-fadeIn');
             const { score, riskLevel, totalFindings } = scanner.calculateScore(state.scanResults);
 
-            // Privacy Score
             DOM.privacyScore.classList.remove('hidden');
             DOM.scoreText.textContent = totalFindings > 0 ? `${score}/100 (${riskLevel} Risk)` : '100/100 (No Risks)';
             DOM.scoreBreakdown.innerHTML = state.scanResults.flatMap(file => 
@@ -439,7 +470,6 @@ const renderer = {
             ).join('') || '<p>No sensitive data found</p>';
             utils.log(`Displayed score: ${score}`);
 
-            // Metadata
             DOM.metadataSection.classList.add('hidden');
             state.scanResults.forEach(fileResult => {
                 if (Object.keys(fileResult.metadata).length) {
@@ -451,7 +481,6 @@ const renderer = {
                 }
             });
 
-            // Content
             DOM.beforeContent.innerHTML = '';
             state.scanResults.forEach(fileResult => {
                 let displayContent = utils.escapeHTML(fileResult.content);
@@ -475,15 +504,16 @@ const renderer = {
             });
             utils.log('Displayed content');
 
-            // Show Sanitize and Export
             if (totalFindings > 0) {
                 DOM.sanitizeBtn.classList.remove('hidden');
                 DOM.scanContent.classList.remove('hidden');
                 DOM.exportOptions.classList.remove('hidden');
             }
             utils.showStatus(totalFindings > 0 ? 'Scan completed with findings' : 'Scan completed: No risks found', 'success');
+            utils.showToast(totalFindings > 0 ? 'Scan completed with findings' : 'Scan completed: No risks found', 2000);
         } catch (err) {
             utils.showStatus('Error displaying results', 'error');
+            utils.showToast('Error displaying results', 2000);
             utils.log(`Display error: ${err.message}`, 'error');
         }
     },
@@ -498,21 +528,32 @@ const renderer = {
 
 /**
  * Module: Event Listeners
- * Initializes all user interactions
  */
 const initEvents = () => {
     try {
         // Theme Toggle
         DOM.themeToggle.addEventListener('click', themeManager.toggle);
 
+        // Cache Clear
+        DOM.clearCacheBtn.addEventListener('click', cacheManager.clear);
+
+        // Toast Close
+        DOM.toastClose.addEventListener('click', () => {
+            DOM.toast.classList.add('hidden');
+        });
+
         // Drag and Drop
-        const handleDragOver = utils.debounce((e) => {
+        DOM.dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.stopPropagation();
             DOM.dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
-        }, 100);
-        DOM.dropZone.addEventListener('dragover', handleDragOver);
-        DOM.dropZone.addEventListener('dragenter', handleDragOver);
+        });
+
+        DOM.dropZone.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            DOM.dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
+        });
 
         DOM.dropZone.addEventListener('dragleave', (e) => {
             e.preventDefault();
@@ -525,19 +566,34 @@ const initEvents = () => {
             e.stopPropagation();
             DOM.dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-gray-700');
             fileHandler.handleFiles(e.dataTransfer.files);
+            utils.showToast('Files dropped', 2000);
+            utils.log('Files dropped');
         });
 
         // File Input
         DOM.dropZone.addEventListener('click', (e) => {
             e.preventDefault();
-            DOM.fileInput.click();
-            utils.log('File input triggered');
+            try {
+                DOM.fileInput.click();
+                utils.showToast('Opening file picker', 2000);
+                utils.log('File picker triggered');
+            } catch (err) {
+                utils.showStatus('Error opening file picker', 'error');
+                utils.showToast('Error opening file picker', 2000);
+                utils.log(`File picker error: ${err.message}`, 'error');
+            }
         });
 
         DOM.fileInput.addEventListener('change', () => {
-            fileHandler.handleFiles(DOM.fileInput.files);
-            DOM.fileInput.value = '';
-            utils.log('Files selected via input');
+            try {
+                fileHandler.handleFiles(DOM.fileInput.files);
+                DOM.fileInput.value = '';
+                utils.log('Files selected via input');
+            } catch (err) {
+                utils.showStatus('Error processing files', 'error');
+                utils.showToast('Error processing files', 2000);
+                utils.log(`File input change error: ${err.message}`, 'error');
+            }
         });
 
         // Scan Button
@@ -564,7 +620,7 @@ const initEvents = () => {
             for (const { name, file } of state.filesContent) {
                 try {
                     utils.showStatus(`Processing ${name}...`);
-                    utils.log(`Processing ${name}`);
+                    utils.showToast(`Processing ${name}...`, 2000);
                     const content = await fileHandler.readFile(file);
                     const metadata = await fileHandler.extractMetadata(file);
                     const result = scanner.scanContent(content, DOM.languageSelect.value);
@@ -573,6 +629,7 @@ const initEvents = () => {
                     renderer.updateProgress(progress);
                 } catch (err) {
                     utils.showStatus(`Error processing ${name}: ${err}`, 'error');
+                    utils.showToast(`Error processing ${name}`, 2000);
                     utils.log(`Error processing ${name}: ${err}`, 'error');
                 }
             }
@@ -584,6 +641,7 @@ const initEvents = () => {
                 DOM.scanBtn.disabled = state.filesContent.length === 0;
             } catch (err) {
                 utils.showStatus('Error finalizing scan', 'error');
+                utils.showToast('Error finalizing scan', 2000);
                 utils.log(`Scan finalization error: ${err.message}`, 'error');
                 state.isScanning = false;
                 DOM.scanBtn.disabled = state.filesContent.length === 0;
@@ -601,10 +659,12 @@ const initEvents = () => {
                     <h5 class="font-medium mt-4">${utils.escapeHTML(file.name)}</h5>
                     <p>${utils.escapeHTML(file.content)}</p>
                 `).join('');
+                utils.showToast('Content sanitized', 2000);
                 utils.log('Sanitization completed');
                 utils.showStatus('Content sanitized', 'success');
             } catch (err) {
                 utils.showStatus('Error sanitizing content', 'error');
+                utils.showToast('Error sanitizing content', 2000);
                 utils.log(`Sanitization error: ${err.message}`, 'error');
             }
         });
@@ -620,10 +680,12 @@ const initEvents = () => {
                 a.download = 'sanitized.txt';
                 a.click();
                 URL.revokeObjectURL(url);
+                utils.showToast('Exported as TXT', 2000);
                 utils.log('Exported as TXT');
                 utils.showStatus('Exported as TXT', 'success');
             } catch (err) {
                 utils.showStatus('Error exporting TXT', 'error');
+                utils.showToast('Error exporting TXT', 2000);
                 utils.log(`TXT export error: ${err.message}`, 'error');
             }
         });
@@ -648,22 +710,24 @@ const initEvents = () => {
                     }
                 });
                 doc.save('sanitized.pdf');
+                utils.showToast('Exported as PDF', 2000);
                 utils.log('Exported as PDF');
                 utils.showStatus('Exported as PDF', 'success');
             } catch (err) {
                 utils.showStatus('Error exporting PDF', 'error');
+                utils.showToast('Error exporting PDF', 2000);
                 utils.log(`PDF export error: ${err.message}`, 'error');
             }
         });
     } catch (err) {
         utils.log(`Event binding error: ${err.message}`, 'error');
         utils.showStatus('Error initializing interactions', 'error');
+        utils.showToast('Error initializing app', 2000);
     }
 };
 
 /**
  * Module: Initialization
- * Sets up the application
  */
 const init = () => {
     try {
@@ -671,22 +735,30 @@ const init = () => {
         initEvents();
         utils.log('ScanShield initialized');
         utils.showStatus('Ready to scan files');
+        utils.showToast('ScanShield ready', 2000);
         if (window.pdfjsLib) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min.js';
             utils.log('pdf.js loaded');
         } else {
             utils.log('pdf.js not loaded', 'error');
             utils.showStatus('Error: PDF scanning unavailable', 'error');
+            utils.showToast('PDF scanning unavailable', 2000);
         }
         if (!window.Tesseract) {
             utils.log('Tesseract.js not loaded', 'error');
             utils.showStatus('Warning: Image scanning unavailable', 'error');
+            utils.showToast('Image scanning unavailable', 2000);
         }
     } catch (err) {
         utils.log(`Initialization error: ${err.message}`, 'error');
         utils.showStatus('Error initializing app', 'error');
+        utils.showToast('Error initializing app', 2000);
     }
 };
 
 // Start Application
-document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
