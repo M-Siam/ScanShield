@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ScanShield — Smart Document Risk Checker</title>
+    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="assets/fonts/inter.css">
     <link rel="icon" href="assets/icons/logo.svg">
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-    <header class="p-4 bg-blue-600 text-white flex justify-between items-center">
-        <div class="flex items-center">
-            <img src="assets/icons/logo.svg" alt="ScanShield Logo" class="w-8 h-8 mr-2">
+    <header class="bg-blue-600 text-white p-4 flex justify-between items-center shadow-md">
+        <div class="flex items-center space-x-2">
+            <img src="assets/icons/logo.svg" alt="ScanShield Logo" class="w-8 h-8">
             <h1 class="text-2xl font-bold">ScanShield</h1>
         </div>
         <button id="theme-toggle" class="p-2 rounded-full hover:bg-blue-700 transition">
@@ -19,40 +20,40 @@
         </button>
     </header>
 
-    <main class="container mx-auto p-6 flex flex-col md:flex-row gap-6">
+    <main class="container mx-auto p-6 flex flex-col lg:flex-row gap-6">
         <!-- Left: Upload + Settings -->
-        <section class="md:w-1/3 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+        <section class="lg:w-1/3 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
             <h2 class="text-xl font-semibold mb-4">Upload Files</h2>
-            <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-gray-600 p-6 text-center rounded-lg hover:border-blue-500 transition-colors">
-                <p class="text-lg">Drag & Drop or Click to Upload</p>
-                <p class="text-sm text-gray-500">PDF, DOCX, TXT, PNG, JPG (Max 10MB)</p>
+            <div id="drop-zone" class="border-2 border-dashed border-gray-300 dark:border-gray-600 p-6 text-center rounded-lg hover:border-blue-500 transition-colors cursor-pointer">
+                <p class="text-lg font-medium">Drag & Drop or Click to Upload</p>
+                <p class="text-sm text-gray-500 mt-1">PDF, DOCX, TXT, PNG, JPG (Max 10MB)</p>
                 <input type="file" id="file-input" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg" multiple class="hidden">
             </div>
             <div id="file-list" class="mt-4 space-y-2"></div>
             <div class="mt-4">
-                <label class="block text-sm font-medium">Language for Patterns</label>
-                <select id="language-select" class="w-full p-2 mt-1 rounded-md bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Language for Patterns</label>
+                <select id="language-select" class="w-full p-2 mt-1 rounded-md bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500">
                     <option value="en">English</option>
                     <option value="es">Spanish</option>
                     <option value="fr">French</option>
                 </select>
             </div>
-            <button id="scan-btn" class="mt-6 w-full bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700 ripple disabled:opacity-50 disabled:cursor-not-allowed" disabled>Start Scan</button>
+            <button id="scan-btn" class="mt-6 w-full bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>Start Scan</button>
             <div id="status-message" class="mt-4 text-sm text-gray-500"></div>
         </section>
 
         <!-- Right: Scan Results -->
-        <section class="md:w-2/3 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+        <section class="lg:w-2/3 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
             <h2 class="text-xl font-semibold mb-4">Scan Results</h2>
             <div id="progress-bar" class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4 hidden">
-                <div class="bg-blue-600 h-3 rounded-full transition-all" style="width: 0%"></div>
+                <div class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
             </div>
             <div id="results" class="space-y-6">
                 <!-- Privacy Score -->
                 <div id="privacy-score" class="hidden p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <h3 class="text-lg font-medium">Privacy Score</h3>
                     <p id="score-text" class="text-2xl font-bold text-blue-600 dark:text-blue-400"></p>
-                    <div id="score-breakdown" class="mt-2 text-sm"></div>
+                    <div id="score-breakdown" class="mt-2 text-sm text-gray-600 dark:text-gray-300"></div>
                 </div>
                 <!-- Metadata -->
                 <div id="metadata" class="hidden p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
@@ -61,30 +62,30 @@
                 </div>
                 <!-- Scan Content -->
                 <div id="scan-content" class="hidden">
-                    <div class="flex justify-between mb-3">
+                    <div class="flex justify-between items-center mb-3">
                         <h3 class="text-lg font-medium">Scanned Content</h3>
-                        <button id="sanitize-btn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 ripple hidden">Sanitize</button>
+                        <button id="sanitize-btn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition hidden">Sanitize</button>
                     </div>
-                    <div class="flex flex-col md:flex-row gap-4">
-                        <div class="w-full md:w-1/2 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <div class="flex flex-col lg:flex-row gap-4">
+                        <div class="w-full lg:w-1/2 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
                             <h4 class="font-medium">Before</h4>
                             <div id="before-content" class="mt-2 text-sm text-gray-600 dark:text-gray-300"></div>
                         </div>
-                        <div class="w-full md:w-1/2 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                        <div class="w-full lg:w-1/2 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
                             <h4 class="font-medium">After</h4>
                             <div id="after-content" class="mt-2 text-sm text-gray-600 dark:text-gray-300"></div>
                         </div>
                     </div>
                 </div>
                 <!-- Export Options -->
-                <div id="export-options" class="hidden mt-4 flex gap-4">
-                    <button id="export-txt" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 ripple">Export as TXT</button>
-                    <button id="export-pdf" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 ripple">Export as PDF</button>
+                <div id="export-options" class="hidden mt-4 flex flex-wrap gap-4">
+                    <button id="export-txt" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Export as TXT</button>
+                    <button id="export-pdf" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Export as PDF</button>
                 </div>
                 <!-- Scan Log -->
                 <div id="scan-log" class="hidden p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <h3 class="text-lg font-medium">Scan Log</h3>
-                    <pre id="log-content" class="text-sm text-gray-600 dark:text-gray-300 overflow-auto max-h-40"></pre>
+                    <pre id="log-content" class="text-sm text-gray-600 dark:text-gray-300 overflow-auto max-h-48"></pre>
                 </div>
             </div>
         </section>
